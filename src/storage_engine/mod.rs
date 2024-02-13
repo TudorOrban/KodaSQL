@@ -2,6 +2,10 @@ use csv::{ReaderBuilder, StringRecord};
 use std::error::Error;
 use std::fs::File;
 
+pub mod select;
+mod table_reader;
+mod insert;
+
 pub fn select_columns(table_name: &str, columns: Vec<&str>) -> Result<Vec<StringRecord>, Box<dyn Error>> {
     let file_path = format!("data/{}.csv", table_name);
     let file = File::open(file_path)?;
