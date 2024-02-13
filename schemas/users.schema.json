@@ -1,0 +1,25 @@
+{
+    "name": "users",
+    "columns": [
+        {
+            "name": "id",
+            "type": "Integer",
+            "constraints": ["NotNull", "Unique"]
+        },
+        {
+            "name": "username",
+            "type": "Text",
+            "constraints": ["NotNull"]
+        },
+        {
+            "name": "email",
+            "type": "Text",
+            "constraints": ["NotNull"]
+        },
+        {
+            "name": "age",
+            "type": "Integer",
+            "constraints": ["NotNull"]
+        }
+    ]
+}

@@ -1,0 +1,20 @@
+{
+    "name": "products",
+    "columns": [
+        {
+            "name": "id",
+            "type": "Integer",
+            "constraints": ["NotNull", "Unique"]
+        },
+        {
+            "name": "name",
+            "type": "Text",
+            "constraints": ["NotNull"]
+        },
+        {
+            "name": "price",
+            "type": "Float",
+            "constraints": ["NotNull"]
+        }
+    ]
+}
