@@ -64,3 +64,58 @@ pub async fn load_table_schemas() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
+
+/*
+ * Unit tests
+*/
+#[cfg(test)]
+mod tests {
+    use crate::schema::{Column, Constraint, DataType};
+
+
+    use super::*;
+
+    #[tokio::test]
+    async fn test_load_table_schemas() {
+            let result = load_table_schemas().await;
+            assert!(result.is_ok());
+
+            let schemas = SCHEMAS.lock().unwrap();
+            assert!(!schemas.is_empty());
+
+            // Assert the "users" table schema is loaded correctly
+            if let Some(user_schema) = schemas.get("users") {
+                assert_eq!(user_schema.name, "users");
+
+                let expected_columns = vec![
+                    Column {
+                        name: "id".to_string(),
+                        data_type: DataType::Integer,
+                        constraints: vec![Constraint::NotNull, Constraint::Unique],
+                    },
+                    Column {
+                        name: "username".to_string(),
+                        data_type: DataType::Text,
+                        constraints: vec![Constraint::NotNull],
+                    },
+                    Column {
+                        name: "email".to_string(),
+                        data_type: DataType::Text,
+                        constraints: vec![Constraint::NotNull],
+                    },
+                    Column {
+                        name: "age".to_string(),
+                        data_type: DataType::Integer,
+                        constraints: vec![Constraint::NotNull],
+                    },
+                ];
+
+                assert_eq!(user_schema.columns.len(), expected_columns.len());
+                for (expected, actual) in expected_columns.iter().zip(user_schema.columns.iter()) {
+                    assert_eq!(expected, actual);
+                }
+            } else {
+                panic!("Schema for 'users' table not found");
+            }
+    }
+}

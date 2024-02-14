@@ -36,12 +36,10 @@ pub async fn handle_query(query: &Query) -> Result<(), Box<dyn Error>> {
                     _ => None,
                 })
                 .collect();
-
-            // let filter = match selection {
-            //     Some(expr) => ColumnFilter::from_expr
-            // }
-
-            let results = table_reader::read_table(&table_name, &columns).await;
+            
+            // let filters = interpret_selection(selection)?;
+            
+            let results = table_reader::read_table(&table_name, &columns, selection).await;
             println!("Query Results: {:?}", results);
 
             Ok(())
@@ -50,4 +48,30 @@ pub async fn handle_query(query: &Query) -> Result<(), Box<dyn Error>> {
     }
 }
 
-
+fn interpret_selection(selection: &Option<Expr>) -> Result<Option<(String, String)>, Box<dyn Error>> {
+    match selection {
+        Some(expr) => match &expr {
+            Expr::BinaryOp { ref left, op, ref right } => {
+                if let (Expr::Identifier(ref ident), Expr::Value(ref value)) = (&**left, &**right) {
+                    match op {
+                        sqlparser::ast::BinaryOperator::Eq => {
+                            let column_name = ident.value.clone();
+                            println!("Column name: {:?}, Value: {:?}", column_name, value);
+                            let condition_value = match value {
+                                sqlparser::ast::Value::Number(n, _) => n.clone(),
+                                sqlparser::ast::Value::SingleQuotedString(s) => s.clone(),
+                                _ => return Err("Unsupported value type in selection".into()),
+                            };
+                            Ok(Some((column_name, condition_value)))
+                        },
+                        _ => Err("Unsupported operator in selection".into()),
+                    }
+                } else {
+                    Err("Unsupported expression format in selection".into())
+                }
+            },
+            _ => Err("Unsupported expression type in selection".into())
+        },
+        None => Ok(None)
+    }
+}

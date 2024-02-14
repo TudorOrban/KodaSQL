@@ -35,6 +35,7 @@ pub async fn dispatch_command(socket: &mut TcpStream) {
                         return;
                     },
                 };
+                println!("AST: {:?}", ast);
     
                 // Dispatch based on the parsed AST
                 for statement in ast {
