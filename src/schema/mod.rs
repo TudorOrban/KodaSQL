@@ -1,18 +1,22 @@
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
+#[derive(Serialize, Deserialize, Debug)]
 pub struct TableSchema {
-    name: String,
-    columns: Vec<Column>
+    pub name: String,
+    pub columns: Vec<Column>
 }
 
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Column {
     pub name: String,
+    #[serde(rename = "type")]
     pub data_type: DataType,
     pub constraints: Vec<Constraint>
 }
 
 
-
-// Supported column data types
+#[derive(Serialize, Deserialize, Debug)]
 pub enum DataType {
     Integer,
     Float,
@@ -20,6 +24,8 @@ pub enum DataType {
     Boolean,
 }
 
+
+#[derive(Serialize, Deserialize, Debug)]
 pub enum Constraint {
     NotNull,
     Unique

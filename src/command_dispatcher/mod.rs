@@ -1,12 +1,13 @@
 use tokio::net::TcpStream;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use sqlparser::parser::{Parser, ParserError};
+use sqlparser::ast::Statement;
 use sqlparser::dialect::GenericDialect;
 
 use crate::storage_engine::select;
 
 pub async fn dispatch_command(socket: &mut TcpStream) {
-    let mut buf = [0; 4096]; // Adjust buffer size as needed
+    let mut buf = [0; 4096];
 
     match socket.read(&mut buf).await {
         Ok(n) if n == 0 => return,
@@ -36,11 +37,8 @@ pub async fn dispatch_command(socket: &mut TcpStream) {
                 };
     
                 // Dispatch based on the parsed AST
-                match ast.first().map(|stmt| stmt.clone()) {
-                    Some(sqlparser::ast::Statement::Query(_)) => {
-                        select::handle_query(&ast[0]).await.unwrap_or_else(|e| eprintln!("{}", e));
-                    },
-                    _ => eprintln!("Unsupported SQL statement")
+                for statement in ast {
+                    dispatch_statement(&statement).await;
                 }
     
                 if let Err(e) = socket.write_all(&buf[0..n]).await {
@@ -50,10 +48,19 @@ pub async fn dispatch_command(socket: &mut TcpStream) {
                 eprintln!("Failed to extract SQL statement from request");
             }
 
-            // Optionally, send a response back to the client
+            // Send a response back to the client
             let response = "Command processed\n";
             let _ = socket.write_all(response.as_bytes()).await;
         },
         Err(e) => eprintln!("Failed to read from socket: {}", e),
+    }
+}
+
+pub async fn dispatch_statement(statement: &Statement) {
+    match statement {
+        Statement::Query(statement) => {
+            select::handle_query(statement).await.unwrap_or_else(|e| eprintln!("{}", e));
+        },
+        _ => eprintln!("Unsupported SQL statement")
     }
 }
