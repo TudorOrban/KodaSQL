@@ -1,10 +1,10 @@
 use tokio::net::TcpStream;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use sqlparser::parser::{Parser, ParserError};
+use sqlparser::parser::Parser;
 use sqlparser::ast::Statement;
 use sqlparser::dialect::GenericDialect;
 
-use crate::storage_engine::select;
+use crate::storage_engine::select::handle_select;
 
 pub async fn dispatch_command(socket: &mut TcpStream) {
     let mut buf = [0; 4096];
@@ -60,7 +60,7 @@ pub async fn dispatch_command(socket: &mut TcpStream) {
 pub async fn dispatch_statement(statement: &Statement) {
     match statement {
         Statement::Query(statement) => {
-            select::handle_query(statement).await.unwrap_or_else(|e| eprintln!("{}", e));
+            handle_select::handle_query(statement).await.unwrap_or_else(|e| eprintln!("{}", e));
         },
         _ => eprintln!("Unsupported SQL statement")
     }
