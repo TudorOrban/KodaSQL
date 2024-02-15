@@ -5,6 +5,7 @@ use std::fs::File;
 
 use crate::server::SCHEMAS;
 use crate::storage_engine::select::utils;
+use crate::schema::constants;
 
 pub async fn read_table(
     table_name: &String,
@@ -20,7 +21,7 @@ pub async fn read_table(
     validate_query(table_name, columns, order_column_name).await?;
 
     // Read from file
-    let file_path = format!("data/{}.csv", table_name);
+    let file_path = format!("{}/data/{}.csv", constants::DATABASE_DIR, table_name);
     let file = File::open(file_path)?;
     let mut rdr = ReaderBuilder::new().has_headers(true).from_reader(file);
 
@@ -138,4 +139,78 @@ pub async fn validate_query(
     }
 
     Ok(())
+}
+
+
+// /*
+//  * Unit tests
+//  */
+#[cfg(test)]
+mod tests {
+    use crate::server::load_table_schemas;
+    use super::*;
+    use sqlparser::ast::{BinaryOperator, Expr, Ident, Value};
+
+    #[tokio::test]
+    async fn test_read_table() {
+        // Prepare
+        // Load table schema for validation
+        let result = load_table_schemas().await;
+        assert!(result.is_ok());
+
+        // Construct query parameters
+        let table_name = String::from("users");
+        let columns = vec![String::from("id"), String::from("username"), String::from("email"), String::from("age")];
+
+        // Construct clause: WHERE id = 2 OR (age = 3 AND email = 'johndoe@example.com')
+        let expression = Some(Expr::BinaryOp {
+            left: Box::new(Expr::BinaryOp {
+                left: Box::new(Expr::Identifier(Ident {
+                    value: "id".to_string(),
+                    quote_style: None,
+                })),
+                op: BinaryOperator::Eq,
+                right: Box::new(Expr::Value(Value::Number("2".to_string(), false))),
+            }),
+            op: BinaryOperator::Or,
+            right: Box::new(Expr::Nested(Box::new(Expr::BinaryOp {
+                left: Box::new(Expr::BinaryOp {
+                    left: Box::new(Expr::Identifier(Ident {
+                        value: "age".to_string(),
+                        quote_style: None,
+                    })),
+                    op: BinaryOperator::Eq,
+                    right: Box::new(Expr::Value(Value::Number("4".to_string(), false))),
+                }),
+                op: BinaryOperator::And,
+                right: Box::new(Expr::BinaryOp {
+                    left: Box::new(Expr::Identifier(Ident {
+                        value: "email".to_string(),
+                        quote_style: None,
+                    })),
+                    op: BinaryOperator::Eq,
+                    right: Box::new(Expr::Value(Value::SingleQuotedString("johndoe@example.com".to_string()))),
+                }),
+            })))
+        });
+        let order_column_name = Some(String::from("id"));
+        let ascending = true;
+        let limit = Some(10);
+
+        // Act: call read_table
+        let potential_results = read_table(&table_name, &columns, &expression, &order_column_name, ascending, limit).await;
+        let results = potential_results.expect("An error occurred");
+        
+        // Assert: records match
+        let expected_records = vec![
+            StringRecord::from(vec!["1", "John Doe", "johndoe@example.com", "4"]),
+            StringRecord::from(vec!["2", "Jane Doe", "janedoe@example.com", "20"]),
+        ];
+
+        assert_eq!(results.len(), expected_records.len(), "Number of results does not match expected");
+
+        for (result, expected) in results.iter().zip(expected_records.iter()) {
+            assert_eq!(result, expected, "Result record does not match expected");
+        }
+    }
 }

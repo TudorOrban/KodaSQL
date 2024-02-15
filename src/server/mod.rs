@@ -2,9 +2,10 @@ use lazy_static::lazy_static;
 use std::sync::Mutex;
 use std::collections::HashMap;
 use tokio::net::TcpListener;
-use crate::command_dispatcher::dispatch_command;
 
+use crate::command_dispatcher::dispatch_command;
 use crate::schema::TableSchema;
+use crate::schema::constants;
 
 lazy_static! {
     pub static ref SCHEMAS: Mutex<HashMap<String, TableSchema>> = Mutex::new(HashMap::new());
@@ -35,9 +36,9 @@ pub async fn run_server(listener: TcpListener) {
     }
 }
 
-
 pub async fn load_table_schemas() -> Result<(), Box<dyn std::error::Error>> {
-    let paths = std::fs::read_dir("schemas")?.filter_map(|entry| {
+    let data_file_path = format!("{}/schemas", constants::DATABASE_DIR);
+    let paths = std::fs::read_dir(data_file_path)?.filter_map(|entry| {
         let entry = entry.ok()?;
         if entry.path().extension()? == "json" && entry.path().file_stem()?.to_str()?.ends_with(".schema") {
             Some(entry.path())
@@ -71,8 +72,6 @@ pub async fn load_table_schemas() -> Result<(), Box<dyn std::error::Error>> {
 #[cfg(test)]
 mod tests {
     use crate::schema::{Column, Constraint, DataType};
-
-
     use super::*;
 
     #[tokio::test]

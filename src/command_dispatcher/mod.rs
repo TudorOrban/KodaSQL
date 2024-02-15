@@ -1,3 +1,4 @@
+use sqlparser::keywords::TEMPORARY;
 use tokio::net::TcpStream;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use sqlparser::parser::Parser;
@@ -5,6 +6,7 @@ use sqlparser::ast::Statement;
 use sqlparser::dialect::GenericDialect;
 
 use crate::storage_engine::select::handle_select;
+use crate::storage_engine::create::create_table;
 
 pub async fn dispatch_command(socket: &mut TcpStream) {
     let mut buf = [0; 4096];
@@ -62,6 +64,9 @@ pub async fn dispatch_statement(statement: &Statement) {
         Statement::Query(statement) => {
             handle_select::handle_query(statement).await.unwrap_or_else(|e| eprintln!("{}", e));
         },
+        Statement::CreateTable { or_replace, temporary, external, global, if_not_exists, transient, name, columns, constraints, hive_distribution, hive_formats, table_properties, with_options, file_format, location, query, without_rowid, like, clone, engine, comment, auto_increment_offset, default_charset, collation, on_commit, on_cluster, order_by, partition_by, cluster_by, options, strict } => {
+            _ = create_table::create_table(&name, &columns).await;
+        }
         _ => eprintln!("Unsupported SQL statement")
     }
 }

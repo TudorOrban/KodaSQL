@@ -1,0 +1,7 @@
+{
+    "columns": [
+        { "constraints": ["NotNull"], "name": "id", "type": "Integer" },
+        { "constraints": ["NotNull"], "name": "name", "type": "Integer" }
+    ],
+    "name": "new_users"
+}

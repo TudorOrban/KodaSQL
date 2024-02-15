@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+pub mod constants;
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct TableSchema {
     pub name: String,
