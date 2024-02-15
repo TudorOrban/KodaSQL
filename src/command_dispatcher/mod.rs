@@ -5,6 +5,7 @@ use sqlparser::parser::Parser;
 use sqlparser::ast::Statement;
 use sqlparser::dialect::GenericDialect;
 
+use crate::shared::errors::Error;
 use crate::storage_engine::select::handle_select;
 use crate::storage_engine::create::create_table;
 
@@ -33,7 +34,7 @@ pub async fn dispatch_command(socket: &mut TcpStream) {
                 let ast = match Parser::parse_sql(&dialect, sql) {
                     Ok(ast) => ast,
                     Err(e) => {
-                        eprintln!("Error parsing SQL: {}", e);
+                        eprintln!("{}", Error::InvalidSQLSyntax);
                         return;
                     },
                 };
@@ -70,6 +71,6 @@ pub async fn dispatch_statement(statement: &Statement) {
                 Err(e) => eprintln!("Failed to create table: {}", e),
             }
         }
-        _ => eprintln!("Unsupported SQL statement")
+        _ => eprintln!("{}", Error::GenericUnsupported)
     }
 }

@@ -1,9 +1,9 @@
 use sqlparser::ast::{Expr, Query, Select, SelectItem, TableFactor};
-use std::error::Error;
+use std::error::Error as StdError;
 
-use crate::storage_engine::select::table_reader;
+use crate::{shared::errors::Error, storage_engine::select::table_reader};
 
-pub async fn handle_query(query: &Query) -> Result<(), Box<dyn Error>> {
+pub async fn handle_query(query: &Query) -> Result<(), Error> {
     let Query { body, order_by, limit, .. } = query;
 
     match &**body {
@@ -16,7 +16,7 @@ pub async fn handle_query(query: &Query) -> Result<(), Box<dyn Error>> {
             let table = if !from.is_empty() {
                 &from[0].relation
             } else {
-                return Err("No table specified in FROM clause".into());
+                return Err(Error::MissingTableName);
             };
             let table_name = match table {
                 TableFactor::Table { name, .. } => {
@@ -24,7 +24,7 @@ pub async fn handle_query(query: &Query) -> Result<(), Box<dyn Error>> {
                         name.0.iter().map(|ident| ident.value.clone()).collect();
                     parts.join(".")
                 }
-                _ => return Err("Unsupported table factor".into()),
+                _ => return Err(Error::GenericUnsupported),
             };
 
             // Unwrap columns
@@ -52,13 +52,10 @@ pub async fn handle_query(query: &Query) -> Result<(), Box<dyn Error>> {
             let mut limit_value: Option<usize> = None;
 
             if let Some(sqlparser::ast::Expr::Value(sqlparser::ast::Value::Number(limit_str, _))) = limit {
-                // Attempt to parse the string representation of the limit into an usize
                 match limit_str.parse::<usize>() {
                     Ok(num) => limit_value = Some(num),
                     Err(e) => {
-                        // Handle the error, e.g., log it or set limit_value to None if parsing fails
-                        println!("Error parsing limit value: {:?}", e);
-                        limit_value = None;
+                        return Err(Error::InvalidLimit { limit: limit_str.clone() })
                     }
                 }
             }
@@ -69,10 +66,10 @@ pub async fn handle_query(query: &Query) -> Result<(), Box<dyn Error>> {
 
             Ok(())
         }
-        _ => Err("Unsupported SET expression in query".into()),
+        _ => Err(Error::UnsupportedSelectClause),
     }
 }
 
-// fn unwrap_parameters(from: &Vec<TableWithJoins>, projection: &Vec<SelectItem>, order_by: &Vec<OrderByExpr>) -> Result<(), Box<dyn Error>> {
+// fn unwrap_parameters(from: &Vec<TableWithJoins>, projection: &Vec<SelectItem>, order_by: &Vec<OrderByExpr>) -> Result<(), Box<dyn StdError>> {
     
 // }

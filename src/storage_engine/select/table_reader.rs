@@ -1,9 +1,10 @@
 use csv::{ReaderBuilder, StringRecord};
 use sqlparser::ast::Expr;
-use std::error::Error;
+use std::error::Error as StdError;
 use std::fs::File;
 
 use crate::server::SCHEMAS;
+use crate::shared::errors::Error;
 use crate::storage_engine::select::utils;
 use crate::schema::constants;
 
@@ -14,7 +15,7 @@ pub async fn read_table(
     order_column_name: &Option<String>,
     ascending: bool,
     limit: Option<usize>,
-) -> Result<Vec<StringRecord>, Box<dyn Error>> {
+) -> Result<Vec<StringRecord>, Error> {
     println!("Table: {:?}, columns: {:?}", table_name, columns);
 
     // Perform validation before reading the table
@@ -48,7 +49,7 @@ pub async fn read_table(
     Ok(rows)
 }
 
-pub fn apply_filters(record: &StringRecord, headers: &Vec<String>, filters_option: Option<&Expr>) -> Result<bool, Box<dyn Error>> {
+pub fn apply_filters(record: &StringRecord, headers: &Vec<String>, filters_option: Option<&Expr>) -> Result<bool, Error> {
     match filters_option {
         Some(expr) => match expr {
             Expr::BinaryOp { left, op, right } => {
@@ -69,28 +70,28 @@ pub fn apply_filters(record: &StringRecord, headers: &Vec<String>, filters_optio
                     sqlparser::ast::BinaryOperator::Eq => {
                         handle_eq(record, headers, left, right)
                     },
-                    _ => Err("Unsupported operator in selection".into()),
+                    _ => Err(Error::UnsupportedSelectClause),
                 }
             },
             Expr::Nested(nested_expr) => apply_filters(record, headers, Some(nested_expr)),
-            _ => Err("Unsupported expression type in selection".into()),
+            _ => Err(Error::UnsupportedSelectClause),
         },
-        None => Ok(true), // No filter means the record passes
+        None => Ok(true), // Record passes for no filter
     }
 }
 
-fn handle_eq(record: &StringRecord, headers: &Vec<String>, left: &Expr, right: &Expr) -> Result<bool, Box<dyn Error>> {
+fn handle_eq(record: &StringRecord, headers: &Vec<String>, left: &Expr, right: &Expr) -> Result<bool, Error> {
     if let (Expr::Identifier(ident), Expr::Value(value)) = (left, right) {
         let column_name = &ident.value;
         let condition_value = match value {
             sqlparser::ast::Value::Number(n, _) => n,
             sqlparser::ast::Value::SingleQuotedString(s) => s,
-            _ => return Err("Unsupported value type in selection".into()),
+            _ => return Err(Error::UnsupportedValueType { value: format!("{:?}", value) }),
         };
         let value_in_record = record.get(headers.iter().position(|r| r == column_name).unwrap()).map(|v| v.trim());
         Ok(value_in_record == Some(condition_value))
     } else {
-        Err("Unsupported expression format in selection".into())
+        Err(Error::UnsupportedSelectClause)
     }
 }
 
@@ -116,16 +117,16 @@ pub async fn validate_query(
     table_name: &str,
     columns: &Vec<String>,
     order_column_name: &Option<String>,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<(), Error> {
     let schemas = SCHEMAS.lock().unwrap();
 
     let table_schema = schemas.get(table_name)
-        .ok_or_else(|| format!("Table '{}' does not exist.", table_name))?;
+        .ok_or_else(|| Error::TableDoesNotExist { table_name: table_name.to_string() })?;
 
     if !columns.contains(&"*".to_string()) {
         for column in columns {
             if !table_schema.columns.iter().any(|col| &col.name == column) {
-                return Err(format!("Column '{}' does not exist in table '{}'.", column, table_name).into());
+                return Err(Error::ColumnDoesNotExist { column_name: column.clone(), table_name: table_name.to_string() });
             }
         }
     }
@@ -134,7 +135,7 @@ pub async fn validate_query(
         // TODO: Add type validation
         let is_column_valid = !table_schema.columns.iter().any(|col| &col.name == column_name);
         if is_column_valid {
-            return Err(format!("Column '{}' does not exist in table '{}'", column_name, table_name).into());
+            return Err(Error::ColumnDoesNotExist { column_name: column_name.clone(), table_name: table_name.to_string() });
         }
     }
 

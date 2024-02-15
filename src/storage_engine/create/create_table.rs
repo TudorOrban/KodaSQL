@@ -1,24 +1,32 @@
 use std::{error::Error as StdError, fs::File};
-use crate::shared::errors::Error;
 use std::io::prelude::*;
-
 use serde_json::json;
 use sqlparser::ast::{ColumnDef, ColumnOption, ColumnOptionDef, DataType, ObjectName};
 
+use crate::{server::SCHEMAS, shared::errors::Error};
 use crate::schema::{constants, Column, Constraint as CustomConstraint, DataType as CustomDataType, TableSchema};
 
 pub async fn create_table(name: &ObjectName, columns: &Vec<ColumnDef>) -> Result<(), Box<dyn StdError>> {
+    // Validate query and get schema
     let schema = validate_create_table(name, columns).await?;
-
+    
     let schema_json = json!(schema);
     println!("Schema json: {:?}", schema_json.to_string());
 
     // Create schema file
-    let filepath = format!("{}/schemas/{}.schema.json", constants::DATABASE_DIR, schema.name);
-    let mut file = File::create(filepath).map_err(|e| Box::new(e) as Box<dyn StdError>)?;
+    let schema_filepath = format!("{}/schemas/{}.schema.json", constants::DATABASE_DIR, schema.name);
+    let mut schema_file = File::create(schema_filepath).map_err(|e| Box::new(e) as Box<dyn StdError>)?;
 
-    file.write_all(schema_json.to_string().as_bytes())?;
-    file.flush()?;
+    schema_file.write_all(schema_json.to_string().as_bytes())?;
+    schema_file.flush()?;
+
+    // Create data file
+    let data_filepath = format!("{}/data/{}.csv", constants::DATABASE_DIR, schema.name);
+    let data_file_headers = schema.columns.into_iter().map(|column| column.name).collect::<Vec<String>>().join(",");
+    
+    let mut data_file = File::create(data_filepath).map_err(|e| Box::new(e) as Box<dyn StdError>)?;
+    data_file.write_all(data_file_headers.as_bytes())?;
+    data_file.flush()?;
 
     Ok(())
 }
@@ -26,7 +34,15 @@ pub async fn create_table(name: &ObjectName, columns: &Vec<ColumnDef>) -> Result
 pub async fn validate_create_table(name: &ObjectName, columns: &Vec<ColumnDef>) -> Result<TableSchema, Error> {
     let first_identifier = name.0.first().ok_or(Error::MissingTableName)?;
     let table_name = first_identifier.value.clone();
+    
+    // Ensure table doesn't already exist
+    let schemas = SCHEMAS.lock().unwrap();
+    let does_table_exist = schemas.contains_key(&table_name);
+    if does_table_exist {
+        return Err(Error::TableNameAlreadyExists { table_name: table_name });
+    }
 
+    // Validate query columns and transform to custom schema types
     let mut schema_columns: Vec<Column> = Vec::new();
     for column in columns {
         let data_type = get_column_custom_data_type(&column.data_type, &column.name.value)?;
