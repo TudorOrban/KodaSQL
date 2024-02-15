@@ -65,7 +65,10 @@ pub async fn dispatch_statement(statement: &Statement) {
             handle_select::handle_query(statement).await.unwrap_or_else(|e| eprintln!("{}", e));
         },
         Statement::CreateTable { or_replace, temporary, external, global, if_not_exists, transient, name, columns, constraints, hive_distribution, hive_formats, table_properties, with_options, file_format, location, query, without_rowid, like, clone, engine, comment, auto_increment_offset, default_charset, collation, on_commit, on_cluster, order_by, partition_by, cluster_by, options, strict } => {
-            _ = create_table::create_table(&name, &columns).await;
+            match create_table::create_table(&name, &columns).await {
+                Ok(_) => println!("Table created successfully."),
+                Err(e) => eprintln!("Failed to create table: {}", e),
+            }
         }
         _ => eprintln!("Unsupported SQL statement")
     }
