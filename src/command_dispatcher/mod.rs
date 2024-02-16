@@ -7,6 +7,7 @@ use sqlparser::dialect::GenericDialect;
 use crate::network_protocol::parsing::{format_response, parse_request};
 use crate::network_protocol::types::{Request, Response, ResponseStatus};
 use crate::shared::errors::Error;
+use crate::storage_engine::insert::insert_into;
 use crate::storage_engine::select::handle_select;
 use crate::storage_engine::create::create_table;
 
@@ -66,6 +67,7 @@ async fn process_request(request: Request) -> Result<String, Error> {
     // Parse request into AST
     let dialect = GenericDialect {};
     let ast = Parser::parse_sql(&dialect, sql).map_err(|_| Error::InvalidSQLSyntax)?;
+    println!("AST: {:?}", ast);
 
     // Process AST and dispatch statements
     let mut results = Vec::new();
@@ -87,6 +89,9 @@ async fn dispatch_statement(statement: &Statement) -> Result<String, Error> {
         },
         Statement::CreateTable { or_replace, temporary, external, global, if_not_exists, transient, name, columns, constraints, hive_distribution, hive_formats, table_properties, with_options, file_format, location, query, without_rowid, like, clone, engine, comment, auto_increment_offset, default_charset, collation, on_commit, on_cluster, order_by, partition_by, cluster_by, options, strict } => {
             create_table::create_table(&name, &columns).await
+        },
+        Statement::Insert { or, ignore, into, table_name, table_alias, columns, overwrite, source, partitioned, after_columns, table, on, returning, replace_into, priority } => {
+            insert_into::insert_into_table(&table_name, &columns, &source).await
         }
         _ => Err(Error::GenericUnsupported)
     }

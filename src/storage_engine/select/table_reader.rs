@@ -26,7 +26,7 @@ pub async fn read_table(
         Ok(file) => file,
         Err(_) => return Err(Error::TableDoesNotExist { table_name: table_name.clone() }),
     };
-    let mut rdr = ReaderBuilder::new().has_headers(true).from_reader(file);
+    let mut rdr: csv::Reader<File> = ReaderBuilder::new().has_headers(true).from_reader(file);
 
     // Trim spaces in CSV file and find indices
     let headers = match rdr.headers() {

@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use tokio::net::TcpListener;
 
 use crate::command_dispatcher::handle_request;
-use crate::schema::TableSchema;
+use crate::schema::types::TableSchema;
 use crate::schema::constants;
 
 lazy_static! {
@@ -72,7 +72,7 @@ pub async fn load_table_schemas() -> Result<(), Box<dyn std::error::Error>> {
 */
 #[cfg(test)]
 mod tests {
-    use crate::schema::{Column, Constraint, DataType};
+    use crate::schema::types::{Column, Constraint, DataType};
     use super::*;
 
     #[tokio::test]
