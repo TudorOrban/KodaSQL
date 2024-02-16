@@ -1,6 +1,8 @@
 use std::fmt;
 use std::io::Error as IOError;
 
+use serde::{Deserialize, Serialize};
+
 #[derive(Debug)]
 pub enum Error {
     // General
@@ -8,9 +10,10 @@ pub enum Error {
     ServerError,
 
     // Failed
-    FailedTableRead { table_name: String },
     IOError(std::io::Error),
     CsvError(csv::Error),
+    SerdeJsonError(serde_json::Error),
+    FailedTableRead { table_name: String },
 
     // Invalid
     InvalidSQLSyntax,
@@ -45,9 +48,10 @@ impl fmt::Display for Error {
             Error::ServerError => write!(f, "A server error occurred."),
 
             // Failed
-            Error::FailedTableRead { table_name } => write!(f, "Failed to read data from table {}", table_name),
             Error::IOError(e) => write!(f, "IO error: {}", e),
             Error::CsvError(e) => write!(f, "CSV error: {}", e),
+            Error::SerdeJsonError(e) => write!(f, "Serde JSON error: {}", e),
+            Error::FailedTableRead { table_name } => write!(f, "Failed to read data from table {}", table_name),
 
             // Invalid
             Error::InvalidSQLSyntax => write!(f, "You have an error in your SQL syntax"),
@@ -88,8 +92,34 @@ impl From<csv::Error> for Error {
         Error::CsvError(error)
     }
 }
-// impl From<std::io::Error> for Error {
-//     fn from(e: std::io::Error) -> Self {
-//         Error::IOError(e)
-//     }
-// }
+
+impl From<serde_json::Error> for Error {
+    fn from(error: serde_json::Error) -> Self {
+        Error::SerdeJsonError(error)
+    }
+}
+
+
+// Define a trait for converting errors to a client-friendly error
+pub trait ToClientError {
+    fn to_client_error(&self) -> ClientError;
+}
+
+// Struct for client-friendly errors
+#[derive(Serialize, Deserialize)]
+pub struct ClientError {
+    pub message: String,
+    // Add more fields as necessary, like error codes
+}
+
+// Implement the trait for your Error enum
+impl ToClientError for Error {
+    fn to_client_error(&self) -> ClientError {
+        match self {
+            // Simplify messages for client consumption
+            _ => ClientError {
+                message: format!("{}", self),
+            },
+        }
+    }
+}

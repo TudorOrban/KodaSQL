@@ -3,7 +3,7 @@ use std::sync::Mutex;
 use std::collections::HashMap;
 use tokio::net::TcpListener;
 
-use crate::command_dispatcher::dispatch_command;
+use crate::command_dispatcher::handle_request;
 use crate::schema::TableSchema;
 use crate::schema::constants;
 
@@ -28,7 +28,7 @@ pub async fn run_server(listener: TcpListener) {
         match listener.accept().await {
             Ok((mut socket, _)) => {
                 tokio::spawn(async move {
-                    dispatch_command(&mut socket).await;
+                    handle_request(&mut socket).await;
                 });
             },
             Err(e) => eprintln!("Failed to accept connection: {}", e),
@@ -36,6 +36,7 @@ pub async fn run_server(listener: TcpListener) {
     }
 }
 
+// Server initialization
 pub async fn load_table_schemas() -> Result<(), Box<dyn std::error::Error>> {
     let data_file_path = format!("{}/schemas", constants::DATABASE_DIR);
     let paths = std::fs::read_dir(data_file_path)?.filter_map(|entry| {

@@ -3,3 +3,4 @@ pub mod schema;
 pub mod server;
 pub mod storage_engine;
 pub mod shared;
+pub mod network_protocol;

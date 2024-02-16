@@ -3,7 +3,7 @@ use std::error::Error as StdError;
 
 use crate::{shared::errors::Error, storage_engine::select::table_reader};
 
-pub async fn handle_query(query: &Query) -> Result<(), Error> {
+pub async fn handle_query(query: &Query) -> Result<String, Error> {
     let Query { body, order_by, limit, .. } = query;
 
     match &**body {
@@ -60,11 +60,8 @@ pub async fn handle_query(query: &Query) -> Result<(), Error> {
                 }
             }
             
-            // Hit database
-            let results = table_reader::read_table(&table_name, &columns, selection, &order_column_name, ascending, limit_value).await;
-            println!("Query Results: {:?}", results);
-
-            Ok(())
+            // Hit database and return response
+            table_reader::read_table(&table_name, &columns, selection, &order_column_name, ascending, limit_value).await 
         }
         _ => Err(Error::UnsupportedSelectClause),
     }

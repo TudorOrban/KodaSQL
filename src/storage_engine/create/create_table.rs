@@ -6,7 +6,7 @@ use sqlparser::ast::{ColumnDef, ColumnOption, ColumnOptionDef, DataType, ObjectN
 use crate::{server::SCHEMAS, shared::errors::Error};
 use crate::schema::{constants, Column, Constraint as CustomConstraint, DataType as CustomDataType, TableSchema};
 
-pub async fn create_table(name: &ObjectName, columns: &Vec<ColumnDef>) -> Result<(), Box<dyn StdError>> {
+pub async fn create_table(name: &ObjectName, columns: &Vec<ColumnDef>) -> Result<String, Error> {
     // Validate query and get schema
     let schema = validate_create_table(name, columns).await?;
     
@@ -15,7 +15,7 @@ pub async fn create_table(name: &ObjectName, columns: &Vec<ColumnDef>) -> Result
 
     // Create schema file
     let schema_filepath = format!("{}/schemas/{}.schema.json", constants::DATABASE_DIR, schema.name);
-    let mut schema_file = File::create(schema_filepath).map_err(|e| Box::new(e) as Box<dyn StdError>)?;
+    let mut schema_file = File::create(schema_filepath).map_err(Error::IOError)?;
 
     schema_file.write_all(schema_json.to_string().as_bytes())?;
     schema_file.flush()?;
@@ -24,11 +24,11 @@ pub async fn create_table(name: &ObjectName, columns: &Vec<ColumnDef>) -> Result
     let data_filepath = format!("{}/data/{}.csv", constants::DATABASE_DIR, schema.name);
     let data_file_headers = schema.columns.into_iter().map(|column| column.name).collect::<Vec<String>>().join(",");
     
-    let mut data_file = File::create(data_filepath).map_err(|e| Box::new(e) as Box<dyn StdError>)?;
+    let mut data_file = File::create(data_filepath).map_err(Error::IOError)?;
     data_file.write_all(data_file_headers.as_bytes())?;
     data_file.flush()?;
 
-    Ok(())
+    Ok(String::from(""))
 }
 
 pub async fn validate_create_table(name: &ObjectName, columns: &Vec<ColumnDef>) -> Result<TableSchema, Error> {
@@ -78,4 +78,56 @@ fn get_column_custom_constraints(column_constraints: &Vec<ColumnOptionDef>, colu
     }
 
     Ok(custom_constraints)
+}
+
+/*
+ * Unit tests
+ */
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::server::load_table_schemas;
+
+    #[tokio::test]
+    async fn test_validate_create_table() {
+        // Prepare
+        // Load table schema for validation
+        let result = load_table_schemas().await;
+        assert!(result.is_ok());
+
+        // Mock the necessary data
+        let name = mock_object_name("new_table");
+        let columns = vec![
+            mock_column_def("id", DataType::Int(None)),
+            mock_column_def("name", DataType::Int(None)),
+        ];
+
+        // Act
+        let result = validate_create_table(&name, &columns).await;
+        
+        // Assert
+        assert!(result.is_ok());
+
+        if let Ok(schema) = result {
+            assert_eq!(schema.name, "new_table");
+            assert_eq!(schema.columns.len(), 2);
+        }
+    }
+
+
+    // Utils
+    use sqlparser::ast::{ColumnDef, DataType, Ident, ObjectName};
+
+    fn mock_object_name(name: &str) -> ObjectName {
+        ObjectName(vec![Ident::new(name)])
+    }
+
+    fn mock_column_def(name: &str, data_type: DataType) -> ColumnDef {
+        ColumnDef {
+            name: Ident::new(name),
+            data_type,
+            collation: None,
+            options: vec![],
+        }
+    }
 }
