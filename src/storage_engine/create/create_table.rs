@@ -1,4 +1,4 @@
-use std::{error::Error as StdError, fs::File};
+use std::fs::File;
 use std::io::prelude::*;
 use serde_json::json;
 use sqlparser::ast::{ColumnDef, ColumnOption, ColumnOptionDef, DataType, ObjectName};

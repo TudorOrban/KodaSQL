@@ -1,5 +1,4 @@
 use sqlparser::ast::{Expr, Query, Select, SelectItem, TableFactor};
-use std::error::Error as StdError;
 
 use crate::{shared::errors::Error, storage_engine::select::table_reader};
 
@@ -54,7 +53,7 @@ pub async fn handle_query(query: &Query) -> Result<String, Error> {
             if let Some(sqlparser::ast::Expr::Value(sqlparser::ast::Value::Number(limit_str, _))) = limit {
                 match limit_str.parse::<usize>() {
                     Ok(num) => limit_value = Some(num),
-                    Err(e) => {
+                    Err(_) => {
                         return Err(Error::InvalidLimit { limit: limit_str.clone() })
                     }
                 }

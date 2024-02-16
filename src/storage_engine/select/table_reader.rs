@@ -1,11 +1,11 @@
 use csv::{ReaderBuilder, StringRecord};
 use sqlparser::ast::Expr;
 use std::collections::HashMap;
-use std::error::Error as StdError;
 use std::fs::File;
 
 use crate::server::SCHEMAS;
 use crate::shared::errors::Error;
+use crate::storage_engine::select::filters::filter_records;
 use crate::storage_engine::select::utils;
 use crate::schema::constants;
 
@@ -17,120 +17,39 @@ pub async fn read_table(
     ascending: bool,
     limit: Option<usize>,
 ) -> Result<String, Error> {
-    println!("Table: {:?}, columns: {:?}", table_name, columns);
-
     // Perform validation before reading the table
     validate_query(table_name, columns, order_column_name).await?;
 
     // Read from file
     let file_path = format!("{}/data/{}.csv", constants::DATABASE_DIR, table_name);
-    let file = File::open(file_path)?;
+    let file = match File::open(file_path) {
+        Ok(file) => file,
+        Err(_) => return Err(Error::TableDoesNotExist { table_name: table_name.clone() }),
+    };
     let mut rdr = ReaderBuilder::new().has_headers(true).from_reader(file);
 
     // Trim spaces in CSV file and find indices
-    let headers = rdr.headers()?.iter().map(|h| h.trim().to_string()).collect::<Vec<String>>();
+    let headers = match rdr.headers() {
+        Ok(headers) => headers.iter().map(|h| h.trim().to_string()).collect::<Vec<String>>(),
+        Err(_) => return Err(Error::FailedTableRead { table_name: table_name.clone() }),
+    };
     let indices = utils::get_column_indices(&headers, columns);
 
     // Perform filtering and select specified fields
-    let mut rows: Vec<StringRecord> = rdr.records()
-        .filter_map(Result::ok) // Filter out any records that couldn't be read
-        .filter(|record| apply_filters(record, &headers, filters.as_ref()).unwrap_or(false)) // Apply filters
-        .map(|record| StringRecord::from(utils::select_fields(&record, &indices))) // Select fields
-        .collect();
-     
+    let mut rows = filter_records(&mut rdr, &headers, filters, table_name, &indices)?;
+
     // Sort
-    match order_column_name {
-        Some(order_column_name) => sort_records(&mut rows, &headers, order_column_name, ascending),
-        None => {}
+    if let Some(column_name) = order_column_name {
+        let column_index = headers.iter().position(|header| header == column_name)
+                                  .ok_or_else(|| Error::ColumnDoesNotExist { column_name: column_name.clone(), table_name: table_name.clone() })?;
+        sort_records(&mut rows, column_index, ascending);
     }
 
     // Apply limit
     let rows: Vec<StringRecord> = rows.into_iter().take(limit.unwrap_or(usize::MAX)).collect();
-        
+    
     prepare_response(rows, headers)
 }
-
-// Attach column keys to rows and serialize
-pub fn prepare_response(rows: Vec<StringRecord>, headers: Vec<String>) -> Result<String, Error> {
-    let mut structured_rows: Vec<HashMap<String, String>> = Vec::new();
-    
-    for row in rows {
-        let mut row_map: HashMap<String, String> = HashMap::new();
-        for (i, header) in headers.iter().enumerate() {
-            if let Some(value) = row.get(i) {
-                row_map.insert(header.clone(), value.to_string());
-            }
-        }
-        structured_rows.push(row_map);
-    }
-
-    serde_json::to_string(&structured_rows)
-        .map_err(|e| Error::SerdeJsonError(e))
-}
-
-pub fn apply_filters(record: &StringRecord, headers: &Vec<String>, filters_option: Option<&Expr>) -> Result<bool, Error> {
-    match filters_option {
-        Some(expr) => match expr {
-            Expr::BinaryOp { left, op, right } => {
-                match op {
-                    // Handle logical AND
-                    sqlparser::ast::BinaryOperator::And => {
-                        let left_result = apply_filters(record, headers, Some(left))?;
-                        let right_result = apply_filters(record, headers, Some(right))?;
-                        Ok(left_result && right_result)
-                    },
-                    // Handle logical OR
-                    sqlparser::ast::BinaryOperator::Or => {
-                        let left_result = apply_filters(record, headers, Some(left))?;
-                        let right_result = apply_filters(record, headers, Some(right))?;
-                        Ok(left_result || right_result)
-                    },
-                    // Handle equality check (Eq)
-                    sqlparser::ast::BinaryOperator::Eq => {
-                        handle_eq(record, headers, left, right)
-                    },
-                    _ => Err(Error::UnsupportedSelectClause),
-                }
-            },
-            Expr::Nested(nested_expr) => apply_filters(record, headers, Some(nested_expr)),
-            _ => Err(Error::UnsupportedSelectClause),
-        },
-        None => Ok(true), // Record passes for no filter
-    }
-}
-
-fn handle_eq(record: &StringRecord, headers: &Vec<String>, left: &Expr, right: &Expr) -> Result<bool, Error> {
-    if let (Expr::Identifier(ident), Expr::Value(value)) = (left, right) {
-        let column_name = &ident.value;
-        let condition_value = match value {
-            sqlparser::ast::Value::Number(n, _) => n,
-            sqlparser::ast::Value::SingleQuotedString(s) => s,
-            _ => return Err(Error::UnsupportedValueType { value: format!("{:?}", value) }),
-        };
-        let value_in_record = record.get(headers.iter().position(|r| r == column_name).unwrap()).map(|v| v.trim());
-        Ok(value_in_record == Some(condition_value))
-    } else {
-        Err(Error::UnsupportedSelectClause)
-    }
-}
-
-
-fn sort_records(records: &mut Vec<StringRecord>, headers: &[String], column_name: &str, ascending: bool) {
-    let column_index = headers.iter().position(|header| header == column_name)
-        .expect("Column name not found in headers");
-
-    records.sort_by(|a,  b| {
-        let a_val = a.get(column_index).unwrap_or_default();
-        let b_val = b.get(column_index).unwrap_or_default();
-
-        if ascending {
-            a_val.cmp(&b_val)
-        } else {
-            b_val.cmp(&a_val)
-        }
-    });
-}
-
 
 pub async fn validate_query(
     table_name: &str,
@@ -159,6 +78,37 @@ pub async fn validate_query(
     }
 
     Ok(())
+}
+
+fn sort_records(records: &mut Vec<StringRecord>, column_index: usize, ascending: bool) {
+    records.sort_by(|a, b| {
+        let a_val = a.get(column_index).unwrap_or_default();
+        let b_val = b.get(column_index).unwrap_or_default();
+
+        if ascending {
+            a_val.cmp(&b_val)
+        } else {
+            b_val.cmp(&a_val)
+        }
+    });
+}
+
+// Attach column keys to rows and serialize
+pub fn prepare_response(rows: Vec<StringRecord>, headers: Vec<String>) -> Result<String, Error> {
+    let mut structured_rows: Vec<HashMap<String, String>> = Vec::new();
+    
+    for row in rows {
+        let mut row_map: HashMap<String, String> = HashMap::new();
+        for (i, header) in headers.iter().enumerate() {
+            if let Some(value) = row.get(i) {
+                row_map.insert(header.clone(), value.to_string());
+            }
+        }
+        structured_rows.push(row_map);
+    }
+
+    serde_json::to_string(&structured_rows)
+        .map_err(|e| Error::SerdeJsonError(e))
 }
 
 

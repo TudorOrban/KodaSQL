@@ -2,7 +2,7 @@ use std::io;
 
 use bincode;
 use kodasql::network_protocol::types::{MessageType, Request, Response, ResponseStatus};
-use tokio::{net::TcpStream};
+use tokio::net::TcpStream;
 use tokio::io::{AsyncReadExt, AsyncWriteExt, AsyncBufReadExt};
 use tokio::io::BufReader;
 
@@ -14,7 +14,9 @@ async fn main() -> io::Result<()> {
 
     loop {
         println!("Enter SQL query (or type 'exit' to quit):");
-        input_string.clear(); // Clear the buffer for the next input
+        input_string.clear();
+
+        // Send request via command line
         stdin.read_line(&mut input_string).await?;
 
         if input_string.trim().eq("exit") {
@@ -42,8 +44,6 @@ async fn main() -> io::Result<()> {
         match bincode::deserialize::<Response>(&buffer[..n]) {
             Ok(response) => {
                 // Handle response
-                println!("Response received: {:?}", response);
-                // If you want to specifically handle different response statuses here, you can do so
                 match response.status {
                     ResponseStatus::Success => {
                         if let Some(data) = response.data {
@@ -53,17 +53,13 @@ async fn main() -> io::Result<()> {
                     ResponseStatus::Error => {
                         if let Some(error) = response.error {
                             println!("Error: {}", error);
-                            // Continue even in case of error
                             continue;
                         }
                     },
-                    _ => println!("Unknown response status."),
                 }
             },
             Err(e) => {
-                // Handle deserialization error without terminating the program
                 println!("Failed to deserialize response: {}", e);
-                // Decide how you want to handle this case. For example, you might want to retry or simply continue.
                 continue;
             }
         }

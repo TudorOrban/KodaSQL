@@ -31,6 +31,7 @@ pub enum Error {
 
     UnsupportedSelectClause,
     UnsupportedValueType { value: String },
+    UnsupportedOperationType { operation: String },
 
     UnsupportedColumnDataType { column_name: String, column_type: String },
     UnsupportedConstraint { column_name: String, column_constraint: String },
@@ -70,6 +71,7 @@ impl fmt::Display for Error {
             Error::UnsupportedValueType { value } => write!(f, "The value {} is not currently supported.", value),
             Error::UnsupportedColumnDataType { column_name, column_type } => write!(f, "The column type {} for column {} is not supported.", column_type, column_name),
             Error::UnsupportedConstraint { column_name, column_constraint } => write!(f, "The constraint {} for column {} is not supported.", column_constraint, column_name),
+            Error::UnsupportedOperationType { operation } => write!(f, "The operation {} in the WHERE clause is not currently supported.", operation),
 
             // Missing
             Error::TableDoesNotExist { table_name } => write!(f, "Table {} does not exist.", table_name),
