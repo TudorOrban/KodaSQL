@@ -25,6 +25,7 @@ pub enum Error {
 
     // Not allowed
     TableNameAlreadyExists { table_name: String },
+    NoPrimaryKeyPresent,
 
     // Not supported
     GenericUnsupported,
@@ -64,6 +65,7 @@ impl fmt::Display for Error {
 
             // Not allowed
             Error::TableNameAlreadyExists { table_name } => write!(f, "Table name {} already exists.", table_name),
+            Error::NoPrimaryKeyPresent => write!(f, "Your query does not specify a primary key column."),
 
             // Not supported
             Error::GenericUnsupported => write!(f, "You're attempting an SQL operation that is not currently supported."),

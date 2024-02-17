@@ -18,6 +18,13 @@ pub fn get_column_custom_constraints(column_constraints: &Vec<ColumnOptionDef>, 
     for constraint in column_constraints {
         match constraint.option {
             ColumnOption::NotNull => custom_constraints.push(CustomConstraint::NotNull),
+            ColumnOption::Unique { is_primary, .. } => {
+                if is_primary {
+                    custom_constraints.push(CustomConstraint::PrimaryKey);
+                } else {
+                    custom_constraints.push(CustomConstraint::Unique);
+                }
+            },
             _ => return Err(Error::UnsupportedConstraint { column_name: column_name.clone(), column_constraint: format!("{:?}", constraint.option) })
         }
     }

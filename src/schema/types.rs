@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use serde::{Deserialize, Serialize};
 
 
@@ -12,7 +14,8 @@ pub struct Column {
     pub name: String,
     #[serde(rename = "type")]
     pub data_type: DataType,
-    pub constraints: Vec<Constraint>
+    pub constraints: Vec<Constraint>,
+    pub is_indexed: bool
 }
 
 
@@ -24,9 +27,15 @@ pub enum DataType {
     Boolean,
 }
 
-
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub enum Constraint {
     NotNull,
-    Unique
+    Unique,
+    PrimaryKey
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Index {
+    pub key: String,
+    pub offsets: HashMap<String, u64>
 }

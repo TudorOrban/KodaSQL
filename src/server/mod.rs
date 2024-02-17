@@ -92,21 +92,25 @@ mod tests {
                         name: "id".to_string(),
                         data_type: DataType::Integer,
                         constraints: vec![Constraint::NotNull, Constraint::Unique],
+                        is_indexed: false
                     },
                     Column {
                         name: "username".to_string(),
                         data_type: DataType::Text,
                         constraints: vec![Constraint::NotNull],
+                        is_indexed: false
                     },
                     Column {
                         name: "email".to_string(),
                         data_type: DataType::Text,
                         constraints: vec![Constraint::NotNull],
+                        is_indexed: false
                     },
                     Column {
                         name: "age".to_string(),
                         data_type: DataType::Integer,
                         constraints: vec![Constraint::NotNull],
+                        is_indexed: false
                     },
                 ];
 

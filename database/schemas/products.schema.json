@@ -4,17 +4,20 @@
         {
             "name": "id",
             "type": "Integer",
-            "constraints": ["NotNull", "Unique"]
+            "constraints": ["NotNull", "Unique"],
+            "is_indexed": false
         },
         {
             "name": "name",
             "type": "Text",
-            "constraints": ["NotNull"]
+            "constraints": ["NotNull"],
+            "is_indexed": false
         },
         {
             "name": "price",
             "type": "Float",
-            "constraints": ["NotNull"]
+            "constraints": ["NotNull"],
+            "is_indexed": false
         }
     ]
 }

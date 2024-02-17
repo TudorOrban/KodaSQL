@@ -1,8 +1,9 @@
-use std::fs::File;
-use std::io::prelude::*;
+use std::collections::HashMap;
+use std::fs::{self};
 use serde_json::json;
 use sqlparser::ast::{ColumnDef, ObjectName};
 
+use crate::schema::types::{Constraint, Index};
 use crate::schema::utils;
 use crate::{server::SCHEMAS, shared::errors::Error};
 use crate::schema::{constants, types::{Column, TableSchema}};
@@ -16,23 +17,18 @@ pub async fn create_table(name: &ObjectName, columns: &Vec<ColumnDef>) -> Result
 
     // Create schema file
     let schema_filepath = format!("{}/schemas/{}.schema.json", constants::DATABASE_DIR, schema.name);
-    let mut schema_file = File::create(schema_filepath).map_err(Error::IOError)?;
-
-    schema_file.write_all(schema_json.to_string().as_bytes())?;
-    schema_file.flush()?;
+    fs::write(&schema_filepath, schema_json.to_string().as_bytes()).map_err(Error::IOError)?;
 
     // Create data file
     let data_filepath = format!("{}/data/{}.csv", constants::DATABASE_DIR, schema.name);
-    let data_file_headers = schema.columns.into_iter().map(|column| column.name).collect::<Vec<String>>().join(",");
-    
-    let mut data_file = File::create(data_filepath).map_err(Error::IOError)?;
-    data_file.write_all(data_file_headers.as_bytes())?;
-    data_file.flush()?;
+    let data_file_headers = schema.columns.iter().map(|column| column.name.as_str()).collect::<Vec<&str>>().join(",");
+    fs::write(&data_filepath, data_file_headers.as_bytes()).map_err(Error::IOError)?;
 
-    Ok(String::from(""))
+    // Create index files for PrimaryKey/Unique columns
+    create_indexes(schema).await
 }
 
-pub async fn validate_create_table(name: &ObjectName, columns: &Vec<ColumnDef>) -> Result<TableSchema, Error> {
+async fn validate_create_table(name: &ObjectName, columns: &Vec<ColumnDef>) -> Result<TableSchema, Error> {
     let first_identifier = name.0.first().ok_or(Error::MissingTableName)?;
     let table_name = first_identifier.value.clone();
     
@@ -48,17 +44,36 @@ pub async fn validate_create_table(name: &ObjectName, columns: &Vec<ColumnDef>) 
     for column in columns {
         let data_type = utils::get_column_custom_data_type(&column.data_type, &column.name.value)?;
         let constraints = utils::get_column_custom_constraints(&column.options, &column.name.value)?;
+        let is_indexed = index_strategy(&constraints);
 
         schema_columns.push(Column {
             name: column.name.value.clone(),
             data_type,
-            constraints
+            constraints,
+            is_indexed,
         });
     }
 
     Ok(TableSchema { name: table_name, columns: schema_columns })
 }
 
+async fn create_indexes(schema: TableSchema) -> Result<String, Error> {
+    let indexable_columns = schema.columns.iter()
+        .filter(|col| index_strategy(&col.constraints));
+
+    for column in indexable_columns {
+        let index_filepath = format!("{}/indexes/{}_{}.index.json", constants::DATABASE_DIR, schema.name, column.name); 
+        let index = Index { key: column.name.clone(), offsets: HashMap::new() };
+        let index_json = serde_json::to_string(&index)?;
+        fs::write(&index_filepath, index_json.as_bytes())?;
+    }
+
+    Ok(String::from(""))
+}
+
+fn index_strategy(constraints: &Vec<Constraint>) -> bool {
+    constraints.contains(&Constraint::PrimaryKey) || constraints.contains(&Constraint::Unique)
+}
 
 
 /*

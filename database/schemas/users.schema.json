@@ -4,22 +4,26 @@
         {
             "name": "id",
             "type": "Integer",
-            "constraints": ["NotNull", "Unique"]
+            "constraints": ["NotNull", "Unique"],
+            "is_indexed": false
         },
         {
             "name": "username",
             "type": "Text",
-            "constraints": ["NotNull"]
+            "constraints": ["NotNull"],
+            "is_indexed": false
         },
         {
             "name": "email",
             "type": "Text",
-            "constraints": ["NotNull"]
+            "constraints": ["NotNull"],
+            "is_indexed": false
         },
         {
             "name": "age",
             "type": "Integer",
-            "constraints": ["NotNull"]
+            "constraints": ["NotNull"],
+            "is_indexed": false
         }
     ]
 }

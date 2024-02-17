@@ -1,1 +1,11 @@
-{"columns":[{"constraints":["NotNull"],"name":"id","type":"Integer"}],"name":"new_users_3"}
+{
+    "columns": [
+        {
+            "constraints": ["NotNull"],
+            "name": "id",
+            "type": "Integer",
+            "is_indexed": false
+        }
+    ],
+    "name": "new_users_3"
+}
