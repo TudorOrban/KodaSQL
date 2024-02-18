@@ -1,0 +1,3 @@
+{
+    "tables": ["new_table", "users", "products"]
+}

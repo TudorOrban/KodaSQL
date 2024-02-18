@@ -3,11 +3,12 @@ use sqlparser::ast::Expr;
 use std::collections::HashMap;
 use std::fs::File;
 
-use crate::server::SCHEMAS;
+use crate::database::database_loader::DATABASE;
+use crate::database::database_navigator::get_table_data_path;
+use crate::database::utils::find_database_table;
 use crate::shared::errors::Error;
 use crate::storage_engine::select::filters::filter_records;
 use crate::storage_engine::select::utils;
-use crate::schema::constants;
 
 pub async fn read_table(
     table_name: &String,
@@ -17,11 +18,18 @@ pub async fn read_table(
     ascending: bool,
     limit: Option<usize>,
 ) -> Result<String, Error> {
+    // Get default schema from memory (scoping to minimize lock duration)
+    let default_schema_name;
+    {
+        let database = DATABASE.lock().unwrap();
+        default_schema_name = database.configuration.default_schema.clone();
+    }
+
     // Perform validation before reading the table
     validate_query(table_name, columns, order_column_name).await?;
 
     // Read from file
-    let file_path = format!("{}/data/{}.csv", constants::DATABASE_DIR, table_name);
+    let file_path = get_table_data_path(&default_schema_name, table_name);
     let file = match File::open(file_path) {
         Ok(file) => file,
         Err(_) => return Err(Error::TableDoesNotExist { table_name: table_name.clone() }),
@@ -52,15 +60,20 @@ pub async fn read_table(
 }
 
 pub async fn validate_query(
-    table_name: &str,
+    // database: &Database,
+    table_name: &String,
     columns: &Vec<String>,
     order_column_name: &Option<String>,
 ) -> Result<(), Error> {
-    let schemas = SCHEMAS.lock().unwrap();
+    
+    let database = &*DATABASE.lock().unwrap();
+    // Ensure table exists
+    let table_schema = match find_database_table(database, &table_name) {
+        Some(schema) => schema,
+        None => return Err(Error::TableDoesNotExist { table_name: table_name.clone() }),
+    };
 
-    let table_schema = schemas.get(table_name)
-        .ok_or_else(|| Error::TableDoesNotExist { table_name: table_name.to_string() })?;
-
+    // Ensure selected columns exist
     if !columns.contains(&"*".to_string()) {
         for column in columns {
             if !table_schema.columns.iter().any(|col| &col.name == column) {
@@ -69,6 +82,7 @@ pub async fn validate_query(
         }
     }
 
+    // Ensure order column exists
     if let Some(column_name) = order_column_name {
         // TODO: Add type validation
         let is_column_valid = !table_schema.columns.iter().any(|col| &col.name == column_name);

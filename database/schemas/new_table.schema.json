@@ -1,1 +1,0 @@
-{"columns":[{"constraints":["NotNull","PrimaryKey"],"is_indexed":true,"name":"id","type":"Integer"},{"constraints":["Unique"],"is_indexed":true,"name":"username","type":"Integer"}],"name":"new_table"}

@@ -3,25 +3,25 @@
     "columns": [
         {
             "name": "id",
-            "type": "Integer",
+            "data_type": "Integer",
             "constraints": ["NotNull", "Unique"],
             "is_indexed": false
         },
         {
             "name": "username",
-            "type": "Text",
+            "data_type": "Text",
             "constraints": ["NotNull"],
             "is_indexed": false
         },
         {
             "name": "email",
-            "type": "Text",
+            "data_type": "Text",
             "constraints": ["NotNull"],
             "is_indexed": false
         },
         {
             "name": "age",
-            "type": "Integer",
+            "data_type": "Integer",
             "constraints": ["NotNull"],
             "is_indexed": false
         }

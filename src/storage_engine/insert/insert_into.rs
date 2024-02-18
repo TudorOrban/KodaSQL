@@ -3,9 +3,11 @@ use csv::{ReaderBuilder, StringRecord};
 use std::fs::File;
 use std::io::BufReader;
 
-use crate::{server::SCHEMAS, shared::errors::Error};
+use crate::database::database_loader::DATABASE;
+use crate::shared::errors::Error;
 use crate::storage_engine::select::utils;
-use crate::schema::{constants, types::{Column, TableSchema}};
+use crate::database::{constants, types::{Column, TableSchema}};
+use crate::storage_engine::validation::common::does_table_exist;
 
 pub async fn insert_into_table(name: &ObjectName, columns: &Vec<Ident>, source: &Option<Box<Query>>) -> Result<String, Error> {
     let result = validate_insert_into(name, columns).await?;
@@ -28,10 +30,9 @@ async fn validate_insert_into(name: &ObjectName, columns: &Vec<Ident>) -> Result
         .collect();
     
     // Validate table exists
-    let schemas = SCHEMAS.lock().unwrap();
-    let does_table_exist = schemas.contains_key(&table_name);
-    if !does_table_exist {
-        return Err(Error::TableNameAlreadyExists { table_name: table_name });
+    let database = &*DATABASE.lock().unwrap();
+    if !does_table_exist(database, &table_name) {
+        return Err(Error::TableDoesNotExist { table_name: table_name });
     }
 
     // Read from schema file and deserialize
@@ -47,7 +48,7 @@ async fn validate_insert_into(name: &ObjectName, columns: &Vec<Ident>) -> Result
 
     for column in table_schema.columns {
         if !column_strings.contains(&column.name) {
-            
+
         }
     }
     // Vaildate column types

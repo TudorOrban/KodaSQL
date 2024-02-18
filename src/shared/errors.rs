@@ -10,6 +10,7 @@ pub enum Error {
     ServerError,
 
     // Failed
+    FailedDatabaseLoading,
     IOError(std::io::Error),
     CsvError(csv::Error),
     SerdeJsonError(serde_json::Error),
@@ -38,6 +39,7 @@ pub enum Error {
     UnsupportedConstraint { column_name: String, column_constraint: String },
 
     // Missing
+    SchemaDoesNotExist { schema_name: String },
     TableDoesNotExist { table_name: String },
     ColumnDoesNotExist { column_name: String, table_name: String },
 }
@@ -50,6 +52,7 @@ impl fmt::Display for Error {
             Error::ServerError => write!(f, "A server error occurred."),
 
             // Failed
+            Error::FailedDatabaseLoading => write!(f, "Failed to load database. Run PLACEHOLDER to verify database health."),
             Error::IOError(e) => write!(f, "IO error: {}", e),
             Error::CsvError(e) => write!(f, "CSV error: {}", e),
             Error::SerdeJsonError(e) => write!(f, "Serde JSON error: {}", e),
@@ -76,6 +79,7 @@ impl fmt::Display for Error {
             Error::UnsupportedOperationType { operation } => write!(f, "The operation {} in the WHERE clause is not currently supported.", operation),
 
             // Missing
+            Error::SchemaDoesNotExist { schema_name } => write!(f, "Schema {} does not exist.", schema_name),
             Error::TableDoesNotExist { table_name } => write!(f, "Table {} does not exist.", table_name),
             Error::ColumnDoesNotExist { column_name, table_name } => write!(f, "Column {} does not exist in table '{}'.", column_name, table_name),
         }
