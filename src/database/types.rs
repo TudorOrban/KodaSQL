@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Database {
     pub schemas: Vec<Schema>,
     pub configuration: DatabaseConfiguration,
@@ -17,7 +17,7 @@ impl Default for Database {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct DatabaseConfiguration {
     pub schemas: Vec<String>,
     pub default_schema: String,
@@ -32,25 +32,25 @@ impl Default for DatabaseConfiguration {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Schema {
     pub name: String,
     pub tables: Vec<TableSchema>,
     pub configuration: SchemaConfiguration,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct SchemaConfiguration {
     pub tables: Vec<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct TableSchema {
     pub name: String,
     pub columns: Vec<Column>
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Column {
     pub name: String,
     pub data_type: DataType,
@@ -59,7 +59,7 @@ pub struct Column {
 }
 
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub enum DataType {
     Integer,
     Float,
@@ -67,15 +67,21 @@ pub enum DataType {
     Boolean,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub enum Constraint {
     NotNull,
     Unique,
     PrimaryKey
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Index {
     pub key: String,
     pub offsets: HashMap<String, u64>
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct InsertedRowColumn {
+    pub name: String,
+    pub value: String,
 }

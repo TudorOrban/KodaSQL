@@ -15,6 +15,7 @@ pub enum Error {
     CsvError(csv::Error),
     SerdeJsonError(serde_json::Error),
     FailedTableRead { table_name: String },
+    FailedTableWrite { table_name: String },
 
     // Invalid
     InvalidSQLSyntax,
@@ -26,6 +27,7 @@ pub enum Error {
 
     // Not allowed
     TableNameAlreadyExists { table_name: String },
+    ColumnTypeDoesNotMatch { column_name: String },
     NoPrimaryKeyPresent,
 
     // Not supported
@@ -57,6 +59,7 @@ impl fmt::Display for Error {
             Error::CsvError(e) => write!(f, "CSV error: {}", e),
             Error::SerdeJsonError(e) => write!(f, "Serde JSON error: {}", e),
             Error::FailedTableRead { table_name } => write!(f, "Failed to read data from table {}", table_name),
+            Error::FailedTableWrite { table_name } => write!(f, "Failed to write data into table {}", table_name),
 
             // Invalid
             Error::InvalidSQLSyntax => write!(f, "You have an error in your SQL syntax"),
@@ -68,6 +71,7 @@ impl fmt::Display for Error {
 
             // Not allowed
             Error::TableNameAlreadyExists { table_name } => write!(f, "Table name {} already exists.", table_name),
+            Error::ColumnTypeDoesNotMatch { column_name } => write!(f, "The type of the column {} does not match.", column_name),
             Error::NoPrimaryKeyPresent => write!(f, "Your query does not specify a primary key column."),
 
             // Not supported

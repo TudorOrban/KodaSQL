@@ -4,41 +4,35 @@ use serde_json::json;
 use sqlparser::ast::{ColumnDef, ObjectName};
 
 use crate::database::database_navigator::{get_table_data_path, get_table_index_path, get_table_path, get_table_schema_path};
-use crate::database::types::{Constraint, Index};
+use crate::database::types::{Constraint, Database, Index};
 use crate::database::utils;
 use crate::shared::errors::Error;
-use crate::database::database_loader::DATABASE;
-use crate::database::{constants, types::{Column, TableSchema}};
+use crate::database::database_loader::{get_database, load_schema_configuration, save_schema_configuration};
+use crate::database::types::{Column, TableSchema};
 use crate::storage_engine::validation::common::does_table_exist;
 
 pub async fn create_table(name: &ObjectName, columns: &Vec<ColumnDef>) -> Result<String, Error> {
-    // Get default schema from memory (scoping to minimize lock duration)
-    let default_schema_name;
-    {
-        let database = DATABASE.lock().unwrap();
-        default_schema_name = database.configuration.default_schema.clone();
-    }
+    // Get database blueprint
+    let database = get_database()?;
+    let default_schema_name = database.configuration.default_schema.clone();
 
     // Validate query and get table schema
-    let table_schema = validate_create_table(name, columns).await?;
-    let table_schema_json = json!(table_schema);
-    println!("Schema json: {:?}", table_schema_json.to_string());
-
-    // Create table directory
+    let table_schema = validate_create_table(&database, name, columns)?;
+    
     create_table_folders(&default_schema_name, &table_schema.name).await?;
 
     create_table_files(&default_schema_name, &table_schema).await?;
 
-    // Create index files for PrimaryKey/Unique columns
-    create_indexes(&default_schema_name, table_schema).await
+    create_indexes(&default_schema_name, &table_schema).await?;
+
+    update_schema_configuration(&default_schema_name, &table_schema.name).await
 }
 
-async fn validate_create_table(name: &ObjectName, columns: &Vec<ColumnDef>) -> Result<TableSchema, Error> {
+fn validate_create_table(database: &Database, name: &ObjectName, columns: &Vec<ColumnDef>) -> Result<TableSchema, Error> {
     let first_identifier = name.0.first().ok_or(Error::MissingTableName)?;
     let table_name = first_identifier.value.clone();
     
     // Ensure table doesn't already exist
-    let database = &*DATABASE.lock().unwrap();
     if does_table_exist(database, &table_name) {
         return Err(Error::TableNameAlreadyExists { table_name: table_name });
     }
@@ -84,7 +78,7 @@ async fn create_table_files(schema_name: &String, table_schema: &TableSchema) ->
     Ok(())
 }
 
-async fn create_indexes(schema_name: &String, table_schema: TableSchema) -> Result<String, Error> {
+async fn create_indexes(schema_name: &String, table_schema: &TableSchema) -> Result<(), Error> {
     let indexable_columns = table_schema.columns.iter()
         .filter(|col| index_strategy(&col.constraints));
 
@@ -95,11 +89,23 @@ async fn create_indexes(schema_name: &String, table_schema: TableSchema) -> Resu
         fs::write(&index_filepath, index_json.as_bytes())?;
     }
 
-    Ok(String::from(""))
+    Ok(())
 }
 
 fn index_strategy(constraints: &Vec<Constraint>) -> bool {
     constraints.contains(&Constraint::PrimaryKey) || constraints.contains(&Constraint::Unique)
+}
+
+async fn update_schema_configuration(schema_name: &String, table_name: &String) -> Result<String, Error> {
+    let mut schema_config = load_schema_configuration(schema_name).await?;
+    
+    if !schema_config.tables.contains(table_name) {
+        schema_config.tables.push(table_name.clone());
+    }
+
+    save_schema_configuration(&schema_name, &schema_config).await?;
+    
+    Ok(String::from(""))
 }
 
 

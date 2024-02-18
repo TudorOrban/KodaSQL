@@ -3,8 +3,9 @@ use sqlparser::ast::Expr;
 use std::collections::HashMap;
 use std::fs::File;
 
-use crate::database::database_loader::DATABASE;
+use crate::database::database_loader::get_database;
 use crate::database::database_navigator::get_table_data_path;
+use crate::database::types::Database;
 use crate::database::utils::find_database_table;
 use crate::shared::errors::Error;
 use crate::storage_engine::select::filters::filter_records;
@@ -18,18 +19,14 @@ pub async fn read_table(
     ascending: bool,
     limit: Option<usize>,
 ) -> Result<String, Error> {
-    // Get default schema from memory (scoping to minimize lock duration)
-    let default_schema_name;
-    {
-        let database = DATABASE.lock().unwrap();
-        default_schema_name = database.configuration.default_schema.clone();
-    }
+    // Get database blueprint
+    let database = get_database()?;
 
     // Perform validation before reading the table
-    validate_query(table_name, columns, order_column_name).await?;
+    validate_query(&database, table_name, columns, order_column_name)?;
 
     // Read from file
-    let file_path = get_table_data_path(&default_schema_name, table_name);
+    let file_path = get_table_data_path(&database.configuration.default_schema, table_name);
     let file = match File::open(file_path) {
         Ok(file) => file,
         Err(_) => return Err(Error::TableDoesNotExist { table_name: table_name.clone() }),
@@ -59,14 +56,12 @@ pub async fn read_table(
     prepare_response(rows, headers)
 }
 
-pub async fn validate_query(
-    // database: &Database,
+pub fn validate_query(
+    database: &Database,
     table_name: &String,
     columns: &Vec<String>,
     order_column_name: &Option<String>,
 ) -> Result<(), Error> {
-    
-    let database = &*DATABASE.lock().unwrap();
     // Ensure table exists
     let table_schema = match find_database_table(database, &table_name) {
         Some(schema) => schema,

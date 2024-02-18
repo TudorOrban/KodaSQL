@@ -3,7 +3,7 @@ use std::{fs, sync::Mutex};
 
 use crate::{database::types::Database, shared::errors::Error};
 
-use super::{database_navigator::{get_database_configuration_path, get_schema_configuration_path, get_table_schema_path, get_tables_dir_path}, types::{DatabaseConfiguration, Schema, SchemaConfiguration, TableSchema}};
+use super::{database_navigator::{get_database_configuration_path, get_schema_configuration_path, get_table_schema_path}, types::{DatabaseConfiguration, Schema, SchemaConfiguration, TableSchema}};
 
 lazy_static! {
     pub static ref DATABASE: Mutex<Database> = Mutex::new(Database::default());
@@ -93,4 +93,16 @@ pub async fn load_table(schema_name: &String, table_name: String) -> Result<Tabl
         .map_err(|_| Error::FailedDatabaseLoading)?;
 
     Ok(table_schema)
+}
+
+pub fn get_database() -> Result<Database, Error> {
+    let db_lock = DATABASE.lock().map_err(|_| Error::FailedDatabaseLoading)?;
+    Ok(db_lock.clone())
+}
+
+pub async fn save_schema_configuration(schema_name: &String, config: &SchemaConfiguration) -> Result<(), Error> {
+    let configuration_path = get_schema_configuration_path(schema_name);
+    let content = serde_json::to_string(config).map_err(|_| Error::FailedDatabaseLoading)?;
+    tokio::fs::write(&configuration_path, content).await.map_err(|_| Error::FailedDatabaseLoading)?;
+    Ok(())
 }
