@@ -1,6 +1,6 @@
-use std::{fs::{self, File}, io::{BufReader, Read, Seek, SeekFrom}};
+use std::fs::{self};
 
-use crate::{database::{database_navigator::{get_table_data_path, get_table_index_path, get_table_row_index_path}, types::{Constraint, Index, RowsIndex, TableSchema}}, shared::errors::Error};
+use crate::{database::{database_navigator::{get_table_index_path, get_table_row_index_path}, types::{Constraint, Index, RowsIndex, TableSchema}}, shared::errors::Error};
 
 
 pub async fn create_indexes(schema_name: &String, table_schema: &TableSchema) -> Result<(), Error> {

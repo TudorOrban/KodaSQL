@@ -29,7 +29,8 @@ pub enum Error {
     TableNameAlreadyExists { table_name: String },
     ColumnTypeDoesNotMatch { column_name: String },
     NoPrimaryKeyPresent,
-    ColumnUniquenessNotSatisfied { column_name: String },
+    ColumnUniquenessNotSatisfied { column_name: String, value: String },
+    ColumnNotNull { column_name: String },
 
     // Not supported
     GenericUnsupported,
@@ -74,7 +75,8 @@ impl fmt::Display for Error {
             Error::TableNameAlreadyExists { table_name } => write!(f, "Table name {} already exists.", table_name),
             Error::ColumnTypeDoesNotMatch { column_name } => write!(f, "The type of the column {} does not match.", column_name),
             Error::NoPrimaryKeyPresent => write!(f, "Your query does not specify a primary key column."),
-            Error::ColumnUniquenessNotSatisfied { column_name } => write!(f, "The uniqueness constraint of column {} is not satisifed by your insert", column_name),
+            Error::ColumnUniquenessNotSatisfied { column_name, value } => write!(f, "The uniqueness constraint of column {} is not satisifed by the value {}", column_name, value),
+            Error::ColumnNotNull { column_name } => write!(f, "A null value has been provided for the column {} having a non-null constraint", column_name),
 
             // Not supported
             Error::GenericUnsupported => write!(f, "You're attempting an SQL operation that is not currently supported."),

@@ -1,20 +1,19 @@
-use std::collections::HashMap;
 use std::fs::{self};
 use serde_json::json;
 use sqlparser::ast::{ColumnDef, ObjectName};
 
-use crate::database::database_navigator::{get_table_data_path, get_table_index_path, get_table_path, get_table_schema_path};
-use crate::database::types::{Constraint, Database, Index};
+use crate::database::database_navigator::{get_table_data_path, get_table_path, get_table_schema_path};
+use crate::database::types::Database;
 use crate::database::utils;
 use crate::shared::errors::Error;
-use crate::database::database_loader::{get_database, load_schema_configuration, save_schema_configuration};
+use crate::database::database_loader;
 use crate::database::types::{Column, TableSchema};
-use crate::storage_engine::index::index_manager::{create_indexes, index_strategy};
-use crate::storage_engine::validation::common::does_table_exist;
+use crate::storage_engine::index::index_manager;
+use crate::storage_engine::validation::common;
 
 pub async fn create_table(name: &ObjectName, columns: &Vec<ColumnDef>) -> Result<String, Error> {
     // Get database blueprint
-    let database = get_database()?;
+    let database = database_loader::get_database()?;
     let default_schema_name = database.configuration.default_schema.clone();
 
     // Validate query and get table schema
@@ -24,7 +23,7 @@ pub async fn create_table(name: &ObjectName, columns: &Vec<ColumnDef>) -> Result
 
     create_table_files(&default_schema_name, &table_schema).await?;
 
-    create_indexes(&default_schema_name, &table_schema).await?;
+    index_manager::create_indexes(&default_schema_name, &table_schema).await?;
 
     update_schema_configuration(&default_schema_name, &table_schema.name).await
 }
@@ -34,7 +33,7 @@ fn validate_create_table(database: &Database, name: &ObjectName, columns: &Vec<C
     let table_name = first_identifier.value.clone();
     
     // Ensure table doesn't already exist
-    if does_table_exist(database, &table_name) {
+    if common::does_table_exist(database, &table_name) {
         return Err(Error::TableNameAlreadyExists { table_name: table_name });
     }
 
@@ -43,7 +42,7 @@ fn validate_create_table(database: &Database, name: &ObjectName, columns: &Vec<C
     for column in columns {
         let data_type = utils::get_column_custom_data_type(&column.data_type, &column.name.value)?;
         let constraints = utils::get_column_custom_constraints(&column.options, &column.name.value)?;
-        let is_indexed = index_strategy(&constraints);
+        let is_indexed = index_manager::index_strategy(&constraints);
 
         // TODO: Validate there exists exactly one Primary Key
 
@@ -82,13 +81,15 @@ async fn create_table_files(schema_name: &String, table_schema: &TableSchema) ->
 }
 
 async fn update_schema_configuration(schema_name: &String, table_name: &String) -> Result<String, Error> {
-    let mut schema_config = load_schema_configuration(schema_name).await?;
+    let mut schema_config = database_loader::load_schema_configuration(schema_name).await?;
     
     if !schema_config.tables.contains(table_name) {
         schema_config.tables.push(table_name.clone());
     }
 
-    save_schema_configuration(&schema_name, &schema_config).await?;
+    database_loader::save_schema_configuration(&schema_name, &schema_config).await?;
+
+    // TODO: Reload schema into memory
     
     Ok(String::from(""))
 }

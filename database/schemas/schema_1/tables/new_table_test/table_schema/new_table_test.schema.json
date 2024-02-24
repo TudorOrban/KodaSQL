@@ -1,0 +1,29 @@
+{
+    "columns": [
+        {
+            "constraints": ["PrimaryKey"],
+            "data_type": "Integer",
+            "is_indexed": true,
+            "name": "id"
+        },
+        {
+            "constraints": ["NotNull", { "DefaultValue": "1" }],
+            "data_type": "Integer",
+            "is_indexed": false,
+            "name": "username"
+        },
+        {
+            "constraints": ["NotNull"],
+            "data_type": "Integer",
+            "is_indexed": false,
+            "name": "age"
+        },
+        {
+            "constraints": [],
+            "data_type": "Integer",
+            "is_indexed": false,
+            "name": "other"
+        }
+    ],
+    "name": "new_table_test"
+}

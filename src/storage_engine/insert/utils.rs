@@ -43,14 +43,14 @@ fn value_to_string(value: &Value) -> String {
 }
 
 
-pub fn get_inserted_column_values_from_rows(rows: &Vec<Vec<InsertedRowColumn>>, column_name: &String) -> Result<Vec<String>, Error> {
-    let mut column_values: Vec<String> = Vec::new();
+pub fn get_inserted_column_values_from_rows(rows: &Vec<Vec<InsertedRowColumn>>, column_name: &String) -> Result<Vec<Option<String>>, Error> {
+    let mut column_values: Vec<Option<String>> = Vec::new();
 
     for row in rows {
         let ins_column = row.into_iter().find(|ins_column| &ins_column.name == column_name);
         match ins_column {
-            Some(ins_column) => column_values.push(ins_column.value.clone()),
-            None => return Err(Error::ColumnDoesNotExist { column_name: column_name.clone(), table_name: String::from("") })
+            Some(ins_column) => column_values.push(Some(ins_column.value.clone())),
+            None => column_values.push(None)
         }
     }
 

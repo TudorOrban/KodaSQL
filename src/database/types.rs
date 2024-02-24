@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
 
@@ -71,7 +70,8 @@ pub enum DataType {
 pub enum Constraint {
     NotNull,
     Unique,
-    PrimaryKey
+    PrimaryKey,
+    DefaultValue(String),
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

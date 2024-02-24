@@ -3,12 +3,12 @@ use sqlparser::ast::Expr;
 use std::collections::HashMap;
 use std::fs::File;
 
-use crate::database::database_loader::get_database;
+use crate::database::database_loader;
 use crate::database::database_navigator::get_table_data_path;
 use crate::database::types::Database;
 use crate::database::utils::find_database_table;
 use crate::shared::errors::Error;
-use crate::storage_engine::select::filters::filter_records;
+use crate::storage_engine::select::filters;
 use crate::storage_engine::select::utils;
 
 pub async fn read_table(
@@ -20,7 +20,7 @@ pub async fn read_table(
     limit: Option<usize>,
 ) -> Result<String, Error> {
     // Get database blueprint
-    let database = get_database()?;
+    let database = database_loader::get_database()?;
 
     // Perform validation before reading the table
     validate_query(&database, table_name, columns, order_column_name)?;
@@ -41,7 +41,7 @@ pub async fn read_table(
     let indices = utils::get_column_indices(&headers, columns);
 
     // Perform filtering and select specified fields
-    let mut rows = filter_records(&mut rdr, &headers, filters, table_name, &indices)?;
+    let mut rows = filters::filter_records(&mut rdr, &headers, filters, table_name, &indices)?;
 
     // Sort
     if let Some(column_name) = order_column_name {

@@ -1,4 +1,4 @@
-use sqlparser::ast::{ColumnOption, ColumnOptionDef, DataType};
+use sqlparser::ast::{ColumnOption, ColumnOptionDef, DataType, Expr, Value};
 
 use crate::database::types::{Constraint as CustomConstraint, DataType as CustomDataType};
 use crate::shared::errors::Error;
@@ -18,15 +18,23 @@ pub fn get_column_custom_constraints(column_constraints: &Vec<ColumnOptionDef>, 
     let mut custom_constraints: Vec<CustomConstraint> = Vec::new();
 
     for constraint in column_constraints {
-        match constraint.option {
+        match &constraint.option {
             ColumnOption::NotNull => custom_constraints.push(CustomConstraint::NotNull),
             ColumnOption::Unique { is_primary, .. } => {
-                if is_primary {
+                if *is_primary {
                     custom_constraints.push(CustomConstraint::PrimaryKey);
                 } else {
                     custom_constraints.push(CustomConstraint::Unique);
                 }
             },
+            ColumnOption::Default(expr) => {
+                let default_value = match expr {
+                    Expr::Value(Value::Number(n, _)) => n.clone(),
+                    Expr::Value(Value::SingleQuotedString(s)) => s.clone(),
+                    _ => return Err(Error::UnsupportedConstraint { column_name: column_name.clone(), column_constraint: format!("{:?}", expr) }),
+                }; // TODO: Ensure default_value type coincides with column type
+                custom_constraints.push(CustomConstraint::DefaultValue(default_value))
+            }
             _ => return Err(Error::UnsupportedConstraint { column_name: column_name.clone(), column_constraint: format!("{:?}", constraint.option) })
         }
     }
