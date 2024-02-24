@@ -52,3 +52,7 @@ pub fn get_table_indexes_dir_path(schema_name: &String, table_name: &String) -> 
 pub fn get_table_index_path(schema_name: &String, table_name: &String, column_name: &String) -> String {
     format!("{}/{}.index.json", get_table_indexes_dir_path(schema_name, table_name), column_name)
 }
+
+pub fn get_table_row_index_path(schema_name: &String, table_name: &String) -> String {
+    format!("{}/{}.index.json", get_table_indexes_dir_path(schema_name, table_name), String::from("row_offsets"))
+}

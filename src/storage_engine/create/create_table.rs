@@ -9,6 +9,7 @@ use crate::database::utils;
 use crate::shared::errors::Error;
 use crate::database::database_loader::{get_database, load_schema_configuration, save_schema_configuration};
 use crate::database::types::{Column, TableSchema};
+use crate::storage_engine::index::index_manager::{create_indexes, index_strategy};
 use crate::storage_engine::validation::common::does_table_exist;
 
 pub async fn create_table(name: &ObjectName, columns: &Vec<ColumnDef>) -> Result<String, Error> {
@@ -44,6 +45,8 @@ fn validate_create_table(database: &Database, name: &ObjectName, columns: &Vec<C
         let constraints = utils::get_column_custom_constraints(&column.options, &column.name.value)?;
         let is_indexed = index_strategy(&constraints);
 
+        // TODO: Validate there exists exactly one Primary Key
+
         schema_columns.push(Column {
             name: column.name.value.clone(),
             data_type,
@@ -78,24 +81,6 @@ async fn create_table_files(schema_name: &String, table_schema: &TableSchema) ->
     Ok(())
 }
 
-async fn create_indexes(schema_name: &String, table_schema: &TableSchema) -> Result<(), Error> {
-    let indexable_columns = table_schema.columns.iter()
-        .filter(|col| index_strategy(&col.constraints));
-
-    for column in indexable_columns {
-        let index_filepath = get_table_index_path(schema_name, &table_schema.name, &column.name);
-        let index = Index { key: column.name.clone(), offsets: HashMap::new() };
-        let index_json = serde_json::to_string(&index)?;
-        fs::write(&index_filepath, index_json.as_bytes())?;
-    }
-
-    Ok(())
-}
-
-fn index_strategy(constraints: &Vec<Constraint>) -> bool {
-    constraints.contains(&Constraint::PrimaryKey) || constraints.contains(&Constraint::Unique)
-}
-
 async fn update_schema_configuration(schema_name: &String, table_name: &String) -> Result<String, Error> {
     let mut schema_config = load_schema_configuration(schema_name).await?;
     
@@ -107,7 +92,6 @@ async fn update_schema_configuration(schema_name: &String, table_name: &String) 
     
     Ok(String::from(""))
 }
-
 
 /*
  * Unit tests

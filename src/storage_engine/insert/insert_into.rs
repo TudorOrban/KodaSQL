@@ -1,14 +1,18 @@
 use sqlparser::ast::{Expr, Ident, ObjectName, Query, SetExpr, Value, Values};
 use csv::WriterBuilder;
+use std::collections::HashSet;
 use std::fs::OpenOptions;
 
 use crate::database::database_loader::get_database;
 use crate::database::database_navigator::get_table_data_path;
-use crate::database::types::{DataType, Database, InsertedRowColumn};
+use crate::database::types::{Constraint, DataType, Database, InsertedRowColumn};
 use crate::database::utils::find_database_table;
 use crate::shared::errors::Error;
 use crate::database::types::{Column, TableSchema};
+use crate::storage_engine::index::index_reader;
 use crate::storage_engine::validation::common::does_table_exist;
+
+use super::utils;
 
 pub async fn insert_into_table(name: &ObjectName, columns: &Vec<Ident>, source: &Option<Box<Query>>) -> Result<String, Error> {
     // Get database blueprint
@@ -59,11 +63,11 @@ fn validate_insert_into(database: &Database, name: &ObjectName, columns: &Vec<Id
         .map(|ident| ident.value.clone())
         .collect();
 
-    let inserted_rows = extract_inserted_rows(source, &column_names)?;
+    let inserted_rows = utils::extract_inserted_rows(source, &column_names)?;
 
     validate_rows_types(table_schema, &inserted_rows)?;
 
-    // TODO: Validate constraints and fill unspecified values with NULL or default
+    validate_rows_constraints(&inserted_rows, &String::from("schema_1"), table_schema)?;
 
     Ok((table_name, column_names, inserted_rows))
 }
@@ -117,41 +121,43 @@ fn validate_value_type(column: &Column, insert_value: &String) -> Result<(), Err
 }
 
 
-fn extract_inserted_rows(source: &Option<Box<Query>>, column_names: &[String]) -> Result<Vec<Vec<InsertedRowColumn>>, Error> {
-    let mut all_rows_values = Vec::new();
 
-    if let Some(query) = source {
-        if let SetExpr::Values(Values { rows, .. }) = &*query.body {
-            for row in rows {
-                let mut row_values = Vec::new();
-                for (i, expr) in row.iter().enumerate() {
-                    let value_str = match expr {
-                        Expr::Value(val) => value_to_string(val),
-                        _ => "".to_string(),
-                    };
+fn validate_rows_constraints(inserted_rows: &Vec<Vec<InsertedRowColumn>>, schema_name: &String, table_schema: &TableSchema) -> Result<(), Error> {
+    for column in table_schema.columns.clone() {
+        let is_unique_constraint = column.constraints.contains(&Constraint::Unique) || column.constraints.contains(&Constraint::PrimaryKey);
+        if !is_unique_constraint {
+            continue;
+        }
 
-                    if let Some(column_name) = column_names.get(i) {
-                        row_values.push(InsertedRowColumn {
-                            name: column_name.clone(),
-                            value: value_str,
-                        });
-                    } else {
-                        return Err(Error::GenericUnsupported);
-                    }
-                }
-                all_rows_values.push(row_values);
-            }
+        let column_index = index_reader::read_column_index(schema_name, &table_schema.name, &column.name)?;
+        let column_values = index_reader::get_column_values_from_index(&column_index, schema_name, &table_schema.name)?;
+        let inserted_column_values = utils::get_inserted_column_values_from_rows(inserted_rows, &column.name)?;
+
+        validate_column_uniqueness(&inserted_column_values, &column_values, &column.name)?;
+    }
+
+
+    // TODO: Validate other constraints and fill values with NULL, default, AUTO_INCREMENT, NOW etc
+
+    Ok(())
+}
+
+fn validate_column_uniqueness(inserted_column_values: &Vec<String>, column_values: &Vec<String>, column_name: &String) -> Result<(), Error> {
+    let mut values_set = HashSet::new();
+
+    // Check for duplicates among insert_values
+    for value in inserted_column_values {
+        if !values_set.insert(value) {
+            return Err(Error::ColumnUniquenessNotSatisfied { column_name: column_name.clone() })
         }
     }
 
-    Ok(all_rows_values)
-}
-
-fn value_to_string(value: &Value) -> String {
-    match value {
-        Value::Number(n, _) => n.clone(),
-        Value::SingleQuotedString(s) => s.clone(),
-        Value::Boolean(b) => b.to_string(),
-        _ => "".to_string(),
+    // Check for duplicates with column values
+    for value in column_values {
+        if values_set.contains(value) {
+            return Err(Error::ColumnUniquenessNotSatisfied { column_name: column_name.clone() })
+        }
     }
+
+    Ok(())
 }

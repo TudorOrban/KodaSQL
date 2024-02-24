@@ -77,7 +77,12 @@ pub enum Constraint {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Index {
     pub key: String,
-    pub offsets: HashMap<String, u64>
+    pub offsets: Vec<u64>
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct RowsIndex {
+    pub row_offsets: Vec<u64>
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
