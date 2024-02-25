@@ -1,8 +1,8 @@
-use std::{fs::{self, File}, io::Read};
+use std::fs::{self};
 
 use sqlparser::ast::SchemaName;
 
-use crate::{database::{database_navigator::{get_database_configuration_path, get_schema_configuration_dir_path, get_schema_configuration_path, get_tables_dir_path}, types::{DatabaseConfiguration, SchemaConfiguration}}, shared::errors::Error};
+use crate::{database::{database_navigator::{get_database_configuration_path, get_schema_configuration_dir_path, get_schema_configuration_path, get_tables_dir_path}, types::{DatabaseConfiguration, SchemaConfiguration}}, shared::{errors::Error, file_manager}};
 
 pub async fn create_schema(schema_name: &SchemaName) -> Result<String, Error> {
     let schema_name_string = get_schema_name_string(schema_name)?;
@@ -10,6 +10,8 @@ pub async fn create_schema(schema_name: &SchemaName) -> Result<String, Error> {
     create_schema_folders_and_files(&schema_name_string)?;
 
     update_database_configuration(&schema_name_string)?;
+
+    // TODO: Reload database into memory
     
     Ok(format!("Success: schema {} created.", schema_name_string))
 }
@@ -39,24 +41,19 @@ fn create_schema_folders_and_files(schema_name_string: &String) -> Result<(), Er
     let schema_configuration = SchemaConfiguration {
         tables: Vec::new()
     };
-    let schema_configuration_string = serde_json::to_string(&schema_configuration).map_err(|e| Error::SerdeJsonError(e))?;
-    fs::write(schema_configuration_file_path, schema_configuration_string.as_bytes()).map_err(|e| Error::IOError(e))?;
+    file_manager::write_json_into_file(&schema_configuration_file_path, &schema_configuration)?;
+
     Ok(())
 }
 
 fn update_database_configuration(schema_name_string: &String) -> Result<(), Error> {
     // Read configuration
     let database_configuration_file_path = get_database_configuration_path();
-    let mut file = File::open(&database_configuration_file_path).map_err(|e| Error::IOError(e))?;
-    let mut contents = String::new();
-    file.read_to_string(&mut contents)?;
+    let mut database_configuration = file_manager::read_json_file::<DatabaseConfiguration>(&database_configuration_file_path)?;
     
     // Add new schema name
-    let mut database_configuration: DatabaseConfiguration = serde_json::from_str(&contents).map_err(|e| Error::SerdeJsonError(e))?;
     database_configuration.schemas.push(schema_name_string.clone());
-    let database_configuration_string = serde_json::to_string(&database_configuration).map_err(|e| Error::SerdeJsonError(e))?;
-
-    fs::write(&database_configuration_file_path, database_configuration_string).map_err(|e| Error::IOError(e))?;
+    file_manager::write_json_into_file(&database_configuration_file_path, &database_configuration)?;
 
     Ok(())
 }

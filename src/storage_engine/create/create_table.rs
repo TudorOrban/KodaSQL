@@ -1,5 +1,4 @@
 use std::fs::{self};
-use serde_json::json;
 use sqlparser::ast::{ColumnDef, ObjectName};
 
 use crate::database::database_navigator::{get_table_data_path, get_table_path, get_table_schema_path};
@@ -8,6 +7,7 @@ use crate::database::utils;
 use crate::shared::errors::Error;
 use crate::database::database_loader;
 use crate::database::types::{Column, TableSchema};
+use crate::shared::file_manager;
 use crate::storage_engine::index::index_manager;
 use crate::storage_engine::validation::common;
 
@@ -69,8 +69,7 @@ async fn create_table_folders(schema_name: &String, table_name: &String) -> Resu
 async fn create_table_files(schema_name: &String, table_schema: &TableSchema) -> Result<(), Error> {
     // Table schema file
     let table_schema_filepath = get_table_schema_path(schema_name, &table_schema.name);
-    let table_schema_json = json!(table_schema);
-    fs::write(&table_schema_filepath, table_schema_json.to_string().as_bytes()).map_err(Error::IOError)?;
+    file_manager::write_json_into_file(&table_schema_filepath, &table_schema)?;
     
     // Table data file
     let table_data_filepath = get_table_data_path(schema_name, &table_schema.name);

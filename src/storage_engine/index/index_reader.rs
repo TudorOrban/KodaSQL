@@ -1,35 +1,21 @@
 use std::{fs::File, io::{BufReader, Read, Seek, SeekFrom}};
 
-use crate::{database::{database_navigator::{get_table_data_path, get_table_index_path}, types::{Index, RowsIndex}}, shared::errors::Error};
+use crate::{database::{database_navigator::{get_table_data_path, get_table_index_path}, types::{Index, RowsIndex}}, shared::{errors::Error, file_manager}};
 
 
 pub fn read_column_index(schema_name: &String, table_name: &String, column_name: &String) -> Result<Index, Error> {
-    let contents = read_index(schema_name, table_name, column_name)?;
-    let index: Index = serde_json::from_str(&contents).map_err(|e| Error::SerdeJsonError(e))?;
+    let file_path = get_table_index_path(schema_name, table_name, column_name);
+    let index = file_manager::read_json_file::<Index>(&file_path)?;
 
     Ok(index)
 }
 
 pub fn read_rows_index(schema_name: &String, table_name: &String) -> Result<RowsIndex, Error> {
-    let contents = read_index(schema_name, table_name, &String::from("row_offsets"))?;
-    let index: RowsIndex = serde_json::from_str(&contents).map_err(|e| Error::SerdeJsonError(e))?;
+    let file_path = get_table_index_path(schema_name, table_name, &String::from("row_offsets"));
+    let index = file_manager::read_json_file::<RowsIndex>(&file_path)?;
 
     Ok(index)
 }
-
-fn read_index(schema_name: &String, table_name: &String, column_name: &String) -> Result<String, Error> {
-    let file_path = get_table_index_path(schema_name, table_name, column_name);
-    let mut index_file = match File::open(file_path) {
-        Ok(file) => file,
-        Err(_) => return Err(Error::TableDoesNotExist { table_name: table_name.clone() }),
-    };
-
-    let mut contents = String::new();
-    index_file.read_to_string(&mut contents).map_err(|e| Error::IOError(e))?;
-
-    Ok(contents)
-}
-
 
 pub fn get_column_values_from_index(index: &Index, schema_name: &String, table_name: &String) -> Result<Vec<String>, Error> {
     let data_file_path = get_table_data_path(schema_name, table_name);
@@ -54,7 +40,6 @@ pub fn get_column_values_from_index(index: &Index, schema_name: &String, table_n
 
         column_values.push(column_value);
     }
-    println!("{:?}", column_values);
 
     Ok(column_values)   
 }

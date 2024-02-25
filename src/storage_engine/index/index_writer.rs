@@ -1,6 +1,4 @@
-use std::fs::{self};
-
-use crate::{database::{database_navigator::{get_table_index_path, get_table_row_index_path}, types::{InsertedRowColumn, TableSchema}}, shared::errors::Error};
+use crate::{database::{database_navigator::{get_table_index_path, get_table_row_index_path}, types::{InsertedRowColumn, TableSchema}}, shared::{errors::Error, file_manager}};
 
 use super::{index_reader::{read_column_index, read_rows_index}, offset_counter};
 
@@ -15,9 +13,8 @@ pub fn add_index_offsets_on_insert(complete_inserted_rows: &Vec<Vec<InsertedRowC
 
     // Update rows index
     rows_index.row_offsets.append(&mut new_row_offsets);
-    let row_index_string = serde_json::to_string(&rows_index)?;
     let row_index_file_path = get_table_row_index_path(&schema_name, &table_name);
-    fs::write(row_index_file_path, row_index_string).map_err(|e| Error::IOError(e))?;
+    file_manager::write_json_into_file(&row_index_file_path, &rows_index)?;
 
     // Update column indexes
     for (column_index, column_offsets) in all_offsets.iter().enumerate() {
@@ -32,9 +29,8 @@ pub fn add_index_offsets_on_insert(complete_inserted_rows: &Vec<Vec<InsertedRowC
         let column_name = &column.name;
         let mut column_index = read_column_index(schema_name, table_name, column_name)?;
         column_index.offsets.append(&mut column_offsets.clone());
-        let column_index_string = serde_json::to_string(&column_index)?;
         let column_index_file_path = get_table_index_path(schema_name, table_name, column_name);
-        fs::write(column_index_file_path, column_index_string).map_err(|e| Error::IOError(e))?;
+        file_manager::write_json_into_file(&column_index_file_path, &column_index)?;
     }
 
   Ok(())
