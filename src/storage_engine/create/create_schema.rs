@@ -13,7 +13,7 @@ pub async fn create_schema(schema_name: &SchemaName) -> Result<String, Error> {
 
     // TODO: Reload database into memory
     
-    Ok(format!("Success: schema {} created.", schema_name_string))
+    Ok(format!("Success: schema {} has been created.", schema_name_string))
 }
 
 fn get_schema_name_string(schema_name: &SchemaName) -> Result<String, Error> {

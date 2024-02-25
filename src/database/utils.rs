@@ -10,6 +10,12 @@ pub fn get_column_custom_data_type(column_type: &DataType, column_name: &String)
         DataType::Int(_) => {
             return Ok(CustomDataType::Integer);
         },
+        DataType::Text => {
+            return Ok(CustomDataType::Text);
+        },
+        DataType::Bool => {
+            return Ok(CustomDataType::Boolean);
+        },
         _ => return Err(Error::UnsupportedColumnDataType { column_name: column_name.clone(), column_type: format!("{:?}", column_type) }),
     }    
 }

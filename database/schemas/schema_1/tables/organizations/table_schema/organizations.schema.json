@@ -1,1 +1,0 @@
-{"columns":[{"constraints":["PrimaryKey"],"data_type":"Integer","is_indexed":true,"name":"id"},{"constraints":["Unique"],"data_type":"Integer","is_indexed":true,"name":"name"}],"name":"organizations"}

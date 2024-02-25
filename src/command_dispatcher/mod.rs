@@ -1,12 +1,14 @@
 use tokio::net::TcpStream;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use sqlparser::parser::Parser;
-use sqlparser::ast::Statement;
+use sqlparser::ast::{ObjectType, Statement};
 use sqlparser::dialect::GenericDialect;
 
 use crate::network_protocol::parsing::{format_response, parse_request};
 use crate::network_protocol::types::{Request, Response, ResponseStatus};
 use crate::shared::errors::Error;
+use crate::storage_engine::delete::delete_schema;
+use crate::storage_engine::delete::delete_table;
 use crate::storage_engine::insert::insert_into;
 use crate::storage_engine::select::handle_select;
 use crate::storage_engine::create::{create_schema, create_table};
@@ -95,6 +97,17 @@ async fn dispatch_statement(statement: &Statement) -> Result<String, Error> {
         },
         Statement::Insert { or, ignore, into, table_name, table_alias, columns, overwrite, source, partitioned, after_columns, table, on, returning, replace_into, priority } => {
             insert_into::insert_into_table(&table_name, &columns, &source).await
+        },
+        Statement::Drop { object_type, if_exists, names, cascade, restrict, purge, temporary } => {
+            match object_type {
+                ObjectType::Schema => {
+                    delete_schema::delete_schema(names).await
+                },
+                ObjectType::Table => {
+                    delete_table::delete_table(names).await
+                },
+                _ => Err(Error::GenericUnsupported)
+            }
         }
         _ => Err(Error::GenericUnsupported)
     }
