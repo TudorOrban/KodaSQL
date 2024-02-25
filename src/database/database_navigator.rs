@@ -13,8 +13,12 @@ pub fn get_schema_path(schema_name: &String) -> String {
     format!("{}/{}", get_schemas_dir_path(), schema_name)
 }
 
+pub fn get_schema_configuration_dir_path(schema_name: &String) -> String {
+    format!("{}/configuration", get_schema_path(schema_name))
+}
+
 pub fn get_schema_configuration_path(schema_name: &String) -> String {
-    format!("{}/configuration/configuration.json", get_schema_path(schema_name))
+    format!("{}/configuration.json", get_schema_configuration_dir_path(schema_name))
 }
 
 // Tables
