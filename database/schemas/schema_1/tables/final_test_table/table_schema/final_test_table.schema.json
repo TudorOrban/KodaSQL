@@ -1,0 +1,29 @@
+{
+    "columns": [
+        {
+            "constraints": ["PrimaryKey"],
+            "data_type": "Integer",
+            "is_indexed": true,
+            "name": "id"
+        },
+        {
+            "constraints": ["Unique"],
+            "data_type": "Integer",
+            "is_indexed": true,
+            "name": "username"
+        },
+        {
+            "constraints": ["NotNull"],
+            "data_type": "Integer",
+            "is_indexed": false,
+            "name": "age"
+        },
+        {
+            "constraints": ["NotNull", { "DefaultValue": "3" }],
+            "data_type": "Integer",
+            "is_indexed": false,
+            "name": "email"
+        }
+    ],
+    "name": "final_test_table"
+}

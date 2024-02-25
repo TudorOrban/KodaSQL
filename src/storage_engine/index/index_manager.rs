@@ -2,6 +2,8 @@ use std::fs::{self};
 
 use crate::{database::{database_navigator::{get_table_index_path, get_table_row_index_path}, types::{Constraint, Index, RowsIndex, TableSchema}}, shared::errors::Error};
 
+use super::offset_counter;
+
 
 pub async fn create_indexes(schema_name: &String, table_schema: &TableSchema) -> Result<(), Error> {
     let indexable_columns = table_schema.columns.iter()
@@ -17,7 +19,8 @@ pub async fn create_indexes(schema_name: &String, table_schema: &TableSchema) ->
 
     // Create rows index
     let row_index_filepath = get_table_row_index_path(schema_name, &table_schema.name);
-    let row_index = RowsIndex { row_offsets: Vec::new() };
+    let row_offsets = offset_counter::compute_headers_offset(table_schema);
+    let row_index = RowsIndex { row_offsets: vec![row_offsets] };
     let row_index_json = serde_json::to_string(&row_index)?;
     fs::write(&row_index_filepath, row_index_json.as_bytes())?;
 

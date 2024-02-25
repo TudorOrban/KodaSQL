@@ -74,7 +74,7 @@ async fn create_table_files(schema_name: &String, table_schema: &TableSchema) ->
     
     // Table data file
     let table_data_filepath = get_table_data_path(schema_name, &table_schema.name);
-    let table_data_headers = table_schema.columns.iter().map(|column| column.name.as_str()).collect::<Vec<&str>>().join(",");
+    let table_data_headers = table_schema.columns.iter().map(|column| column.name.as_str()).collect::<Vec<&str>>().join(",") + "\n";
     fs::write(&table_data_filepath, table_data_headers.as_bytes()).map_err(Error::IOError)?;
 
     Ok(())

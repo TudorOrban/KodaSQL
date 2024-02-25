@@ -54,6 +54,7 @@ pub fn get_column_values_from_index(index: &Index, schema_name: &String, table_n
 
         column_values.push(column_value);
     }
+    println!("{:?}", column_values);
 
-    Ok(Vec::new())   
+    Ok(column_values)   
 }

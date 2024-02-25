@@ -1,51 +1,41 @@
-pub fn add_index_offsets(complete_inserted_rows: &Vec<Vec<String>>, schema_name: &String, table_name: &String, columns: &Vec<String>) -> Result<(), Error> {
-  let end_of_file_offset = get_end_of_file_offset(&schema_name, &table_name)?;
-  let row_column_shift: Vec<Vec<u32>> = compute_total_shift(complete_inserted_rows, end_of_file_offset: u64);
-  let row_index = RowIndex {
-      row_offsets = utils::trace(row_columm_shift);
-  };
-  let row_index_string = serde::to_string(row_index);
-  let row_index_file_path = get_row_index_file_path(&schema_name, &table_name);
-  fs:write(row_index_file_path, row_index_file_path)?;
-  
- 
-  for column_shift in row_column_shift {
-      let column_index = Index {
-          // TODO: get and use column_name
-          column_offsets: column_shift
-      };
-      let column_index_file_path = get_column_index_file_path(&schema_name, &table_name, &column_name);
-      let column_index = get_column_index(column_index_file_path)?;
+use std::fs::{self};
 
-      let updated_index: Index = {
-           id; column_index.id,
-           offsets = concat(current_offsets, columm_shift) 
-      };
-      let updated_index_json = serde_json::to_json(updated_index)?;
-      fs:write(column_index_file_path, updated_index_json)?;
-      
-  }
+use crate::{database::{database_navigator::{get_table_index_path, get_table_row_index_path}, types::{InsertedRowColumn, TableSchema}}, shared::errors::Error};
+
+use super::{index_reader::{read_column_index, read_rows_index}, offset_counter};
+
+pub fn add_index_offsets_on_insert(complete_inserted_rows: &Vec<Vec<InsertedRowColumn>>, schema_name: &String, table_name: &String, table_schema: &TableSchema) -> Result<(), Error> {
+    let mut rows_index = read_rows_index(schema_name, table_name)?;
+    let end_of_file_offset = match rows_index.row_offsets.last() {
+        Some(&offset) => offset,
+        None => 0
+    };
+
+    let (all_offsets, mut new_row_offsets) = offset_counter::compute_insertion_offsets(complete_inserted_rows, end_of_file_offset, table_schema.columns.len());
+
+    // Update rows index
+    rows_index.row_offsets.append(&mut new_row_offsets);
+    let row_index_string = serde_json::to_string(&rows_index)?;
+    let row_index_file_path = get_table_row_index_path(&schema_name, &table_name);
+    fs::write(row_index_file_path, row_index_string).map_err(|e| Error::IOError(e))?;
+
+    // Update column indexes
+    for (column_index, column_offsets) in all_offsets.iter().enumerate() {
+        let column = match table_schema.columns.get(column_index) {
+            Some(col) => col,
+            None => continue
+        };
+        if !column.is_indexed {
+            continue;
+        }
+
+        let column_name = &column.name;
+        let mut column_index = read_column_index(schema_name, table_name, column_name)?;
+        column_index.offsets.append(&mut column_offsets.clone());
+        let column_index_string = serde_json::to_string(&column_index)?;
+        let column_index_file_path = get_table_index_path(schema_name, table_name, column_name);
+        fs::write(column_index_file_path, column_index_string).map_err(|e| Error::IOError(e))?;
+    }
 
   Ok(())
-}
-
-fn compute_total_shift(complete_inserted_rows: &Vec<Vec<RowColumn>>, end_of_file_path) -> Vec<Vec<u32>> {
-    let mut results: Vec<Vec<u32>> = Vec::new();
-
-    for row in complete_inserted_rows {
-      let results_row = row.iter().map(|value| (value + ", ").length() + end_of_file_path).collect();
-      results.push(results_row);
-    };
-    
-    results
-};
-
-fn get_end_of_file_offset(schema_name: &String, table_name: &String) -> Result<u64, Error> {
-    let file_path = get_table_row_index_file_path(&schema_name, &table_name);
-    let content = Fs::read(file_path)?;
-    let table_row_index = RowIndex {
-         row_offsets: serde_json::deserialize(content)
-    };
-    
-    table_row_index.row_offsets.get(-i)
 }
