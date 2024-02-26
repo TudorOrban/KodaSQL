@@ -7,10 +7,10 @@ use sqlparser::dialect::GenericDialect;
 use crate::network_protocol::parsing::{format_response, parse_request};
 use crate::network_protocol::types::{Request, Response, ResponseStatus};
 use crate::shared::errors::Error;
-use crate::storage_engine::delete::delete_schema;
+use crate::storage_engine::delete::{delete_records, delete_schema};
 use crate::storage_engine::delete::delete_table;
 use crate::storage_engine::insert::insert_into;
-use crate::storage_engine::select::handle_select;
+use crate::storage_engine::select::select_handler;
 use crate::storage_engine::create::{create_schema, create_table};
 
 pub async fn handle_request(socket: &mut TcpStream) {
@@ -87,7 +87,7 @@ async fn process_request(request: Request) -> Result<String, Error> {
 async fn dispatch_statement(statement: &Statement) -> Result<String, Error> {
     match statement {
         Statement::Query(statement) => {
-            handle_select::handle_query(statement).await
+            select_handler::handle_query(statement).await
         },
         Statement::CreateTable { or_replace, temporary, external, global, if_not_exists, transient, name, columns, constraints, hive_distribution, hive_formats, table_properties, with_options, file_format, location, query, without_rowid, like, clone, engine, comment, auto_increment_offset, default_charset, collation, on_commit, on_cluster, order_by, partition_by, cluster_by, options, strict } => {
             create_table::create_table(&name, &columns).await
@@ -108,6 +108,9 @@ async fn dispatch_statement(statement: &Statement) -> Result<String, Error> {
                 },
                 _ => Err(Error::GenericUnsupported)
             }
+        },
+        Statement::Delete { tables, from, using, selection, returning, order_by, limit } => {
+            delete_records::delete_records(from, selection).await
         }
         _ => Err(Error::GenericUnsupported)
     }

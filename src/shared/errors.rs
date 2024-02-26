@@ -38,6 +38,7 @@ pub enum Error {
     UnsupportedSelectClause,
     UnsupportedValueType { value: String },
     UnsupportedOperationType { operation: String },
+    UnsupportedFilter,
 
     UnsupportedColumnDataType { column_name: String, column_type: String },
     UnsupportedConstraint { column_name: String, column_constraint: String },
@@ -85,6 +86,7 @@ impl fmt::Display for Error {
             Error::UnsupportedColumnDataType { column_name, column_type } => write!(f, "The column type {} for column {} is not supported.", column_type, column_name),
             Error::UnsupportedConstraint { column_name, column_constraint } => write!(f, "The constraint {} for column {} is not supported.", column_constraint, column_name),
             Error::UnsupportedOperationType { operation } => write!(f, "The operation {} in the WHERE clause is not currently supported.", operation),
+            Error::UnsupportedFilter => write!(f, "The filter you are attempting to use is not currently supported."),
 
             // Missing
             Error::SchemaDoesNotExist { schema_name } => write!(f, "Schema {} does not exist.", schema_name),

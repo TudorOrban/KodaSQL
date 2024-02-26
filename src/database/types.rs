@@ -90,3 +90,9 @@ pub struct InsertedRowColumn {
     pub name: String,
     pub value: String,
 }
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ColumnValues {
+    pub column_name: String,
+    pub values: Vec<String>,
+}

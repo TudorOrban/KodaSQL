@@ -1,7 +1,7 @@
 use lazy_static::lazy_static;
-use std::{fs, sync::Mutex};
+use std::sync::Mutex;
 
-use crate::{database::types::Database, shared::errors::Error};
+use crate::{database::types::Database, shared::{errors::Error, file_manager}};
 
 use super::{database_navigator::{get_database_configuration_path, get_schema_configuration_path, get_table_schema_path}, types::{DatabaseConfiguration, Schema, SchemaConfiguration, TableSchema}};
 
@@ -27,23 +27,15 @@ pub async fn load_database() -> Result<(), Error> {
     let mut db = DATABASE.lock().map_err(|_| Error::FailedDatabaseLoading)?;
     db.schemas = schemas;
     db.configuration = config;
-    println!("{:?}", db);
 
     Ok(())
 }
 
 pub async fn load_database_configuration() -> Result<DatabaseConfiguration, Error> {
     let configuration_path = get_database_configuration_path();
+    let configuration = file_manager::read_json_file::<DatabaseConfiguration>(&configuration_path)?;
 
-    // Read the file
-    let config_content = fs::read_to_string(configuration_path)
-        .map_err(|_| Error::FailedDatabaseLoading)?;
-
-    // Deserialize JSON string
-    let config: DatabaseConfiguration = serde_json::from_str(&config_content)
-        .map_err(|_| Error::FailedDatabaseLoading)?;
-
-    Ok(config)
+    Ok(configuration)
 }
 
 pub async fn load_schema(schema_name: String) -> Result<Schema, Error> {
@@ -69,28 +61,14 @@ pub async fn load_schema(schema_name: String) -> Result<Schema, Error> {
 
 pub async fn load_schema_configuration(schema_name: &String) -> Result<SchemaConfiguration, Error> {
     let configuration_path = get_schema_configuration_path(&schema_name);
+    let configuration = file_manager::read_json_file::<SchemaConfiguration>(&configuration_path)?;
 
-    // Read the file
-    let config_content = fs::read_to_string(configuration_path)
-        .map_err(|_| Error::FailedDatabaseLoading)?;
-
-    // Deserialize JSON string
-    let config: SchemaConfiguration = serde_json::from_str(&config_content)
-        .map_err(|_| Error::FailedDatabaseLoading)?;
-
-    Ok(config)
+    Ok(configuration)
 }
 
 pub async fn load_table(schema_name: &String, table_name: String) -> Result<TableSchema, Error> {
     let table_schema_path = get_table_schema_path(schema_name, &table_name);
-    
-    // Read the file
-    let schema_content = fs::read_to_string(table_schema_path)
-        .map_err(|_| Error::FailedDatabaseLoading)?;
-
-    // Deserialize JSON string
-    let table_schema: TableSchema = serde_json::from_str(&schema_content)
-        .map_err(|_| Error::FailedDatabaseLoading)?;
+    let table_schema = file_manager::read_json_file::<TableSchema>(&table_schema_path)?;
 
     Ok(table_schema)
 }

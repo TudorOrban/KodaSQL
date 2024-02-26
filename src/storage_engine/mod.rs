@@ -4,3 +4,6 @@ pub mod insert;
 pub mod validation;
 pub mod index;
 pub mod delete;
+pub mod filters;
+pub mod utils;
+pub mod types;

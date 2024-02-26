@@ -1,36 +1,29 @@
 use csv::{ReaderBuilder, StringRecord};
-use sqlparser::ast::Expr;
 use std::collections::HashMap;
 use std::fs::File;
 
-use crate::database::database_loader;
 use crate::database::database_navigator::get_table_data_path;
 use crate::database::types::Database;
-use crate::database::utils::find_database_table;
 use crate::shared::errors::Error;
 use crate::storage_engine::select::filters;
 use crate::storage_engine::select::utils;
+use crate::storage_engine::types::SelectParameters;
+
+use super::validator;
+
 
 pub async fn read_table(
-    table_name: &String,
-    columns: &Vec<String>,
-    filters: &Option<Expr>,
-    order_column_name: &Option<String>,
-    ascending: bool,
-    limit: Option<usize>,
+    params: SelectParameters,
+    database: &Database,
 ) -> Result<String, Error> {
-    // Get database blueprint
-    let database = database_loader::get_database()?;
+    let SelectParameters {table_name, columns, filters, order_column_name, ascending, limit_value: limit } = params;
 
     // Perform validation before reading the table
-    validate_query(&database, table_name, columns, order_column_name)?;
+    validator::validate_select_query(database, &table_name, &columns, &order_column_name)?;
 
     // Read from file
-    let file_path = get_table_data_path(&database.configuration.default_schema, table_name);
-    let file = match File::open(file_path) {
-        Ok(file) => file,
-        Err(_) => return Err(Error::TableDoesNotExist { table_name: table_name.clone() }),
-    };
+    let file_path = get_table_data_path(&database.configuration.default_schema, &table_name);
+    let file = File::open(file_path).map_err(|e| Error::IOError(e))?;
     let mut rdr: csv::Reader<File> = ReaderBuilder::new().has_headers(true).from_reader(file);
 
     // Trim spaces in CSV file and find indices
@@ -38,14 +31,15 @@ pub async fn read_table(
         Ok(headers) => headers.iter().map(|h| h.trim().to_string()).collect::<Vec<String>>(),
         Err(_) => return Err(Error::FailedTableRead { table_name: table_name.clone() }),
     };
-    let indices = utils::get_column_indices(&headers, columns);
+    let indices = utils::get_column_indices(&headers, &columns);
 
+    println!("Headers: {:?}, columns: {:?}, indices: {:?}", headers, columns, indices);
     // Perform filtering and select specified fields
-    let mut rows = filters::filter_records(&mut rdr, &headers, filters, table_name, &indices)?;
+    let mut rows = filters::filter_all_records(&mut rdr, &headers, &filters, &table_name, &indices)?;
 
     // Sort
     if let Some(column_name) = order_column_name {
-        let column_index = headers.iter().position(|header| header == column_name)
+        let column_index = headers.iter().position(|header| header == &column_name)
                                   .ok_or_else(|| Error::ColumnDoesNotExist { column_name: column_name.clone(), table_name: table_name.clone() })?;
         sort_records(&mut rows, column_index, ascending);
     }
@@ -53,40 +47,7 @@ pub async fn read_table(
     // Apply limit
     let rows: Vec<StringRecord> = rows.into_iter().take(limit.unwrap_or(usize::MAX)).collect();
     
-    prepare_response(rows, headers)
-}
-
-pub fn validate_query(
-    database: &Database,
-    table_name: &String,
-    columns: &Vec<String>,
-    order_column_name: &Option<String>,
-) -> Result<(), Error> {
-    // Ensure table exists
-    let table_schema = match find_database_table(database, &table_name) {
-        Some(schema) => schema,
-        None => return Err(Error::TableDoesNotExist { table_name: table_name.clone() }),
-    };
-
-    // Ensure selected columns exist
-    if !columns.contains(&"*".to_string()) {
-        for column in columns {
-            if !table_schema.columns.iter().any(|col| &col.name == column) {
-                return Err(Error::ColumnDoesNotExist { column_name: column.clone(), table_name: table_name.to_string() });
-            }
-        }
-    }
-
-    // Ensure order column exists
-    if let Some(column_name) = order_column_name {
-        // TODO: Add type validation
-        let is_column_valid = !table_schema.columns.iter().any(|col| &col.name == column_name);
-        if is_column_valid {
-            return Err(Error::ColumnDoesNotExist { column_name: column_name.clone(), table_name: table_name.to_string() });
-        }
-    }
-
-    Ok(())
+    format_response(rows, headers, indices)
 }
 
 fn sort_records(records: &mut Vec<StringRecord>, column_index: usize, ascending: bool) {
@@ -103,22 +64,24 @@ fn sort_records(records: &mut Vec<StringRecord>, column_index: usize, ascending:
 }
 
 // Attach column keys to rows and serialize
-pub fn prepare_response(rows: Vec<StringRecord>, headers: Vec<String>) -> Result<String, Error> {
+pub fn format_response(rows: Vec<StringRecord>, selected_headers: Vec<String>, indices: Vec<usize>) -> Result<String, Error> {
     let mut structured_rows: Vec<HashMap<String, String>> = Vec::new();
     
     for row in rows {
         let mut row_map: HashMap<String, String> = HashMap::new();
-        for (i, header) in headers.iter().enumerate() {
+        indices.iter().enumerate().for_each(|(i, &index)| {
             if let Some(value) = row.get(i) {
+                let header = &selected_headers[index]; // Correctly map selected headers based on indices
                 row_map.insert(header.clone(), value.to_string());
             }
-        }
+        });
         structured_rows.push(row_map);
     }
 
     serde_json::to_string(&structured_rows)
         .map_err(|e| Error::SerdeJsonError(e))
 }
+
 
 
 // /*
