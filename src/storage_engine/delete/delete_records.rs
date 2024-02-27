@@ -1,9 +1,9 @@
-use std::fs::{File, OpenOptions};
+use std::fs::OpenOptions;
 
 use csv::{ReaderBuilder, StringRecord, Writer};
 use sqlparser::ast::{Expr, TableWithJoins};
 
-use crate::{database::{self, database_loader, database_navigator::get_table_data_path, types::Database, utils::find_database_table}, shared::errors::Error, storage_engine::{filters::{filter_column_finder, filter_manager}, index::index_reader, select::table_reader, utils::ast_unwrapper}};
+use crate::{database::{self, database_loader, database_navigator::get_table_data_path, types::Database, utils::find_database_table}, shared::errors::Error, storage_engine::{filters::filter_column_finder, index::index_updater, select::table_reader, utils::ast_unwrapper}};
 
 
 pub async fn delete_records(from: &Vec<TableWithJoins>, filters: &Option<Expr>) -> Result<String, Error> {
@@ -28,15 +28,17 @@ pub async fn delete_records(from: &Vec<TableWithJoins>, filters: &Option<Expr>) 
     let use_indexes = filter_column_finder::use_indexes(&filter_columns, table_schema);
     
     // Read from table and filter
-    let filtered_records = if use_indexes {
+    let remaining_rows = if use_indexes {
         table_reader::read_table_with_indexes(&schema_name, &table_name, filters, &filter_columns, false).await?
     } else {
         table_reader::read_table(&schema_name, &table_name, filters, false).await?
     };
     
-    rewrite_records(&filtered_records, &database.configuration.default_schema, &table_name)?;
+    // Rewrite CSV file with remaining rows
+    rewrite_records(&remaining_rows, &schema_name, &table_name)?;
 
     // TODO: Recalculate index offsets
+    index_updater::update_indexes_on_delete(&remaining_rows, &schema_name, &table_name, table_schema)?;
     
     Ok(format!("Success: records have been deleted."))
 }
@@ -62,10 +64,9 @@ fn rewrite_records(records: &Vec<StringRecord>, schema_name: &String, table_name
     Ok(())
 }
 
-// fn get_
 fn validate_delete(database: &Database, table_name: &String) -> Result<(), Error> {
     // Ensure table exists
-    let table_schema = match find_database_table(database, table_name) {
+    let _ = match find_database_table(database, table_name) {
         Some(schema) => schema,
         None => return Err(Error::TableDoesNotExist { table_name: table_name.clone() }),
     };

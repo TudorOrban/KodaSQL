@@ -1,4 +1,4 @@
 pub mod index_manager;
 pub mod index_reader;
-pub mod index_writer;
+pub mod index_updater;
 mod offset_counter;

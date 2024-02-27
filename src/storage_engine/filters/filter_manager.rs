@@ -1,4 +1,4 @@
-use std::{convert::identity, fs::File};
+use std::fs::File;
 
 use csv::{Reader, StringRecord};
 use sqlparser::ast::Expr;
@@ -15,10 +15,14 @@ pub fn filter_all_records(
 ) -> Result<Vec<StringRecord>, Error> {
     rdr.records()
        .filter_map(Result::ok)
-       .map(|record| apply_filters(&record, headers, (*filters).as_ref()) // Apply filters
-           .and_then(|passes| if passes { Ok(Some(StringRecord::from(record))) } else { Ok(None) }))
-       .collect::<Result<Vec<Option<StringRecord>>, Error>>()
-       .map(|optional_records| optional_records.into_iter().filter_map(identity).collect())
+       .filter_map(|record| {
+           match apply_filters(&record, headers, filters.as_ref()) {
+               Ok(passes) if passes == include => Some(Ok(record)), // Include/exclude record based on `include` flag
+               Ok(_) => None,
+               Err(e) => Some(Err(e)), 
+           }
+       })
+       .collect()
 }
 
 pub fn filter_row_offsets(restricted_rows: &Vec<Vec<String>>, filters: &Option<Expr>, rows_index:RowsIndex, filter_columns: &Vec<String>, include: bool) -> Result<Vec<u64>, Error> {

@@ -6,7 +6,7 @@ use crate::database::database_loader;
 use crate::database::database_navigator;
 use crate::database::utils::find_database_table;
 use crate::shared::errors::Error;
-use crate::storage_engine::index::index_writer;
+use crate::storage_engine::index::index_updater;
 
 use super::validator;
 
@@ -39,7 +39,7 @@ pub async fn insert_into_table(name: &ObjectName, columns: &Vec<Ident>, source: 
         Some(schema) => schema,
         None => return Err(Error::TableDoesNotExist { table_name: table_name.clone() }),
     };
-    index_writer::add_index_offsets_on_insert(&complete_inserted_rows, &database.configuration.default_schema, &table_name, table_schema)?;
+    index_updater::add_index_offsets_on_insert(&complete_inserted_rows, &database.configuration.default_schema, &table_name, table_schema)?;
 
     Ok(table_name)
 }
