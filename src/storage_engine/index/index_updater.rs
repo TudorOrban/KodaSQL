@@ -4,7 +4,7 @@ use crate::{database::{database_navigator::{get_table_index_path, get_table_row_
 
 use super::{index_reader::{read_column_index, read_rows_index}, offset_counter};
 
-pub fn add_index_offsets_on_insert(complete_inserted_rows: &Vec<Vec<InsertedRowColumn>>, schema_name: &String, table_name: &String, table_schema: &TableSchema) -> Result<(), Error> {
+pub fn update_indexes_on_insert(complete_inserted_rows: &Vec<Vec<InsertedRowColumn>>, schema_name: &String, table_name: &String, table_schema: &TableSchema) -> Result<(), Error> {
     let mut rows_index = read_rows_index(schema_name, table_name)?;
     let end_of_file_offset = match rows_index.row_offsets.last() {
         Some(&offset) => offset,
@@ -38,7 +38,7 @@ pub fn add_index_offsets_on_insert(complete_inserted_rows: &Vec<Vec<InsertedRowC
   Ok(())
 }
 
-pub fn update_indexes_on_delete(records: &Vec<StringRecord>, schema_name: &String, table_name: &String, table_schema: &TableSchema) -> Result<(), Error> {
+pub fn update_indexes_on_update_or_delete(records: &Vec<StringRecord>, schema_name: &String, table_name: &String, table_schema: &TableSchema) -> Result<(), Error> {
     let (new_column_value_offsets, new_row_offsets) = offset_counter::compute_records_offsets(records, table_schema);
 
     // Update rows index

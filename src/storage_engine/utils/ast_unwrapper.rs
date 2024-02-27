@@ -1,6 +1,9 @@
-use sqlparser::ast::{Expr, OrderByExpr, Query, Select, SelectItem, TableFactor, TableWithJoins};
+use std::collections::HashMap;
 
-use crate::{shared::errors::Error, storage_engine::types::SelectParameters};
+use sqlparser::ast::{Assignment, Expr, OrderByExpr, Query, Select, SelectItem, TableFactor, TableWithJoins, Value};
+
+use crate::{shared::errors::Error, storage_engine::select::types::SelectParameters};
+
 
 pub fn unwrap_select_query(query: &Query) -> Result<SelectParameters, Error> {
     let mut select_parameters = SelectParameters {
@@ -20,7 +23,7 @@ pub fn unwrap_select_query(query: &Query) -> Result<SelectParameters, Error> {
                 projection, from, selection, ..
             } = &**select;
 
-            select_parameters.table_name = get_table_name_from_from(from)?;
+            select_parameters.table_name = get_table_name_from_from_vector(from)?;
 
             select_parameters.columns = get_columns(projection);
 
@@ -38,12 +41,18 @@ pub fn unwrap_select_query(query: &Query) -> Result<SelectParameters, Error> {
     Ok(select_parameters)
 }
 
-pub fn get_table_name_from_from(from: &Vec<TableWithJoins>) -> Result<String, Error> {
+pub fn get_table_name_from_from_vector(from: &Vec<TableWithJoins>) -> Result<String, Error> {
     let table = if !from.is_empty() {
-        &from[0].relation
+        get_table_name_from_from(&from[0])?
     } else {
-        return Err(Error::MissingTableName);
+        return Err(Error::MissingTableName)?
     };
+
+    Ok(table)
+}
+
+pub fn get_table_name_from_from(from: &TableWithJoins) -> Result<String, Error> {
+    let table = &from.relation;
 
     let table_name = match table {
         TableFactor::Table { name, .. } => {
@@ -96,4 +105,20 @@ pub fn get_limit(limit: &Option<Expr>) -> Result<Option<usize>, Error> {
     }
 
     Ok(limit_value)
+}
+
+pub fn get_new_column_values(assignments: &Vec<Assignment>) -> Result<HashMap<String, String>, Error> {
+    let mut new_column_values: HashMap<String, String> = HashMap::new();
+
+    for assignment in assignments {
+        let column_name = assignment.id.first().ok_or(Error::MissingTableName)?.value.clone();
+        let column_value = match &assignment.value {
+            Expr::Value(Value::SingleQuotedString(value)) => value.clone(),
+            Expr::Value(Value::Number(n, _)) => n.clone(),
+            _ => return Err(Error::UnsupportedValueType { value: assignment.value.to_string() }),
+        };
+        new_column_values.insert(column_name, column_value);
+    }
+
+    Ok(new_column_values)
 }

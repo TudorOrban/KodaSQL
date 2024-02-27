@@ -1,8 +1,8 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fs::OpenOptions};
 
-use csv::StringRecord;
+use csv::{ReaderBuilder, StringRecord, Writer};
 
-use crate::shared::errors::Error;
+use crate::{database::database_navigator::get_table_data_path, shared::errors::Error};
 
 // Select columns
 pub fn select_fields(record: &StringRecord, indices: &[usize]) -> StringRecord {
@@ -43,4 +43,26 @@ pub fn format_response(rows: Vec<StringRecord>, selected_headers: Vec<String>, i
 
     serde_json::to_string(&structured_rows)
         .map_err(|e| Error::SerdeJsonError(e))
+}
+
+
+pub fn rewrite_records(records: &Vec<StringRecord>, schema_name: &String, table_name: &String) -> Result<(), Error> {
+    // Read from file
+    let file_path = get_table_data_path(schema_name, table_name);
+    let mut rdr = ReaderBuilder::new().has_headers(true).from_path(&file_path)?;
+    let headers = rdr.headers()?.clone(); // Clone the headers to use them later for writing
+
+    // Overwrite original file
+    let file = OpenOptions::new().write(true).truncate(true).open(&file_path).map_err(|e| Error::IOError(e))?;
+    let mut wtr = Writer::from_writer(file);
+    wtr.write_record(&headers)?;
+
+    // Step 4: Write records to the new file
+    for record in records {
+        wtr.write_record(record.iter())?;
+    }
+
+    wtr.flush()?;
+
+    Ok(())
 }

@@ -1,9 +1,9 @@
 pub mod select;
 pub mod create;
 pub mod insert;
+pub mod delete;
+pub mod update;
 pub mod validation;
 pub mod index;
-pub mod delete;
 pub mod filters;
 pub mod utils;
-pub mod types;

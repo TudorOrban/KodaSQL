@@ -39,7 +39,7 @@ pub async fn insert_into_table(name: &ObjectName, columns: &Vec<Ident>, source: 
         Some(schema) => schema,
         None => return Err(Error::TableDoesNotExist { table_name: table_name.clone() }),
     };
-    index_updater::add_index_offsets_on_insert(&complete_inserted_rows, &database.configuration.default_schema, &table_name, table_schema)?;
+    index_updater::update_indexes_on_insert(&complete_inserted_rows, &database.configuration.default_schema, &table_name, table_schema)?;
 
     Ok(table_name)
 }
