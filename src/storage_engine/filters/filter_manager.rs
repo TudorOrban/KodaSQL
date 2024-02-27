@@ -3,7 +3,7 @@ use std::{convert::identity, fs::File};
 use csv::{Reader, StringRecord};
 use sqlparser::ast::Expr;
 
-use crate::{shared::errors::Error, storage_engine::select::utils};
+use crate::{database::types::RowsIndex, shared::errors::Error};
 
 use super::{operation_handler, types::RowDataAccess};
 
@@ -11,17 +11,32 @@ pub fn filter_all_records(
     rdr: &mut Reader<File>,
     headers: &Vec<String>,
     filters: &Option<Expr>,
-    indices: &[usize]
+    include: bool,
 ) -> Result<Vec<StringRecord>, Error> {
     rdr.records()
        .filter_map(Result::ok)
        .map(|record| apply_filters(&record, headers, (*filters).as_ref()) // Apply filters
-           .and_then(|passes| if passes { Ok(Some(StringRecord::from(utils::select_fields_old(&record, indices)))) } else { Ok(None) }))
+           .and_then(|passes| if passes { Ok(Some(StringRecord::from(record))) } else { Ok(None) }))
        .collect::<Result<Vec<Option<StringRecord>>, Error>>()
        .map(|optional_records| optional_records.into_iter().filter_map(identity).collect())
 }
 
-// Used for both StringRecord and Vec<String>, in table_reader and table_reader_with_index respectively
+pub fn filter_row_offsets(restricted_rows: &Vec<Vec<String>>, filters: &Option<Expr>, rows_index:RowsIndex, filter_columns: &Vec<String>, include: bool) -> Result<Vec<u64>, Error> {
+    let mut row_offsets: Vec<u64> = Vec::new();
+
+    for (row_index, row) in restricted_rows.iter().enumerate() {
+        let is_hit = apply_filters(row, &filter_columns, filters.as_ref())?;
+        if is_hit && include {
+            row_offsets.push(rows_index.row_offsets[row_index]);
+        } else if !is_hit && !include {
+            row_offsets.push(rows_index.row_offsets[row_index]);
+        }
+    }
+
+    Ok(row_offsets)
+}
+
+// Used for T = StringRecord and Vec<String>
 pub fn apply_filters<T: RowDataAccess>(
     row: &T,
     headers: &Vec<String>,

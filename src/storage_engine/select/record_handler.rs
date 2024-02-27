@@ -4,6 +4,15 @@ use csv::StringRecord;
 
 use crate::shared::errors::Error;
 
+// Select columns
+pub fn select_fields(record: &StringRecord, indices: &[usize]) -> StringRecord {
+    let selected_fields: Vec<String> = indices.iter()
+        .filter_map(|&i| record.get(i).map(|s| s.trim().to_string()))
+        .collect();
+    StringRecord::from(selected_fields)
+}
+
+// Sort
 pub fn sort_records(records: &mut Vec<StringRecord>, column_index: usize, ascending: bool) {
     records.sort_by(|a, b| {
         let a_val = a.get(column_index).unwrap_or_default();
