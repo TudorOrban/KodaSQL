@@ -61,6 +61,7 @@ pub async fn load_schema(schema_name: String) -> Result<Schema, Error> {
 
 pub async fn load_schema_configuration(schema_name: &String) -> Result<SchemaConfiguration, Error> {
     let configuration_path = get_schema_configuration_path(&schema_name);
+    
     let configuration = file_manager::read_json_file::<SchemaConfiguration>(&configuration_path)?;
 
     Ok(configuration)
@@ -69,7 +70,6 @@ pub async fn load_schema_configuration(schema_name: &String) -> Result<SchemaCon
 pub async fn load_table(schema_name: &String, table_name: String) -> Result<TableSchema, Error> {
     let table_schema_path = get_table_schema_path(schema_name, &table_name);
     let table_schema = file_manager::read_json_file::<TableSchema>(&table_schema_path)?;
-
     Ok(table_schema)
 }
 

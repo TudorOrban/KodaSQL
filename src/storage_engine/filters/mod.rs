@@ -1,2 +1,4 @@
+pub mod filter_column_finder;
 pub mod filter_manager;
-pub mod filter_checker;
+pub mod operation_handler;
+mod types;

@@ -2,6 +2,42 @@ use sqlparser::ast::{Expr, OrderByExpr, Query, Select, SelectItem, TableFactor, 
 
 use crate::{shared::errors::Error, storage_engine::types::SelectParameters};
 
+pub fn unwrap_select_query(query: &Query) -> Result<SelectParameters, Error> {
+    let mut select_parameters = SelectParameters {
+        table_name: String::from(""),
+        columns: Vec::new(),
+        filters: None,
+        order_column_name: None,
+        ascending: false,
+        limit_value: None
+    };
+    
+    let Query { body, order_by, limit, .. } = query;
+
+    match &**body {
+        sqlparser::ast::SetExpr::Select(select) => {
+            let Select {
+                projection, from, selection, ..
+            } = &**select;
+
+            select_parameters.table_name = get_table_name_from_from(from)?;
+
+            select_parameters.columns = get_columns(projection);
+
+            select_parameters.filters = selection.clone();
+
+            let (order_column_name, ascending) = get_ordering(order_by);
+            select_parameters.order_column_name = order_column_name;
+            select_parameters.ascending = ascending;
+
+            select_parameters.limit_value = get_limit(limit)?; 
+        }
+        _ => Err(Error::UnsupportedSelectClause)?
+    }
+
+    Ok(select_parameters)
+}
+
 pub fn get_table_name_from_from(from: &Vec<TableWithJoins>) -> Result<String, Error> {
     let table = if !from.is_empty() {
         &from[0].relation
@@ -60,45 +96,4 @@ pub fn get_limit(limit: &Option<Expr>) -> Result<Option<usize>, Error> {
     }
 
     Ok(limit_value)
-}
-
-pub fn unwrap_select_query(query: &Query) -> Result<SelectParameters, Error> {
-    let mut select_parameters = SelectParameters {
-        table_name: String::from(""),
-        columns: Vec::new(),
-        filters: None,
-        order_column_name: None,
-        ascending: false,
-        limit_value: None
-    };
-    
-    let Query { body, order_by, limit, .. } = query;
-
-    match &**body {
-        sqlparser::ast::SetExpr::Select(select) => {
-            let Select {
-                projection, from, selection, ..
-            } = &**select;
-
-            select_parameters.table_name = get_table_name_from_from(from)?;
-
-            select_parameters.columns = get_columns(projection);
-
-            select_parameters.filters = selection.clone();
-
-            let (order_column_name, ascending) = get_ordering(order_by);
-            select_parameters.order_column_name = order_column_name;
-            select_parameters.ascending = ascending;
-
-            select_parameters.limit_value = get_limit(limit)?;
-            
-            // Hit database and return response
-            // filters::filter_manager::find_filter_columns(selection)?;
-
-            // table_reader::read_table(&table_name, &columns, selection, &order_column_name, ascending, limit_value).await 
-        }
-        _ => Err(Error::UnsupportedSelectClause)?
-    }
-
-    Ok(select_parameters)
 }

@@ -4,25 +4,29 @@
             "constraints": ["PrimaryKey"],
             "data_type": "Integer",
             "is_indexed": true,
-            "name": "id"
+            "name": "id",
+            "order": 0
         },
         {
             "constraints": ["Unique"],
             "data_type": "Integer",
             "is_indexed": true,
-            "name": "username"
+            "name": "username",
+            "order": 1
         },
         {
             "constraints": ["NotNull"],
             "data_type": "Integer",
             "is_indexed": false,
-            "name": "age"
+            "name": "age",
+            "order": 3
         },
         {
             "constraints": ["NotNull", { "DefaultValue": "3" }],
             "data_type": "Integer",
             "is_indexed": false,
-            "name": "email"
+            "name": "email",
+            "order": 2
         }
     ],
     "name": "final_test_table"

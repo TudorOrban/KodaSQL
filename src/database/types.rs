@@ -54,7 +54,8 @@ pub struct Column {
     pub name: String,
     pub data_type: DataType,
     pub constraints: Vec<Constraint>,
-    pub is_indexed: bool
+    pub is_indexed: bool,
+    pub order: usize,
 }
 
 

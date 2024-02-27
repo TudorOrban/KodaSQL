@@ -12,11 +12,9 @@ use crate::storage_engine::index::index_manager;
 use crate::storage_engine::validation::common;
 
 pub async fn create_table(name: &ObjectName, columns: &Vec<ColumnDef>) -> Result<String, Error> {
-    // Get database blueprint
     let database = database_loader::get_database()?;
     let default_schema_name = database.configuration.default_schema.clone();
 
-    // Validate query and get table schema
     let table_schema = validate_create_table(&database, name, columns)?;
     
     create_table_folders(&default_schema_name, &table_schema.name).await?;
@@ -39,10 +37,11 @@ fn validate_create_table(database: &Database, name: &ObjectName, columns: &Vec<C
 
     // Validate query columns and transform to custom schema types
     let mut schema_columns: Vec<Column> = Vec::new();
-    for column in columns {
+    for (column_index, column) in columns.iter().enumerate() {
         let data_type = utils::get_column_custom_data_type(&column.data_type, &column.name.value)?;
         let constraints = utils::get_column_custom_constraints(&column.options, &column.name.value)?;
         let is_indexed = index_manager::index_strategy(&constraints);
+        let order = column_index;
 
         // TODO: Validate there exists exactly one Primary Key
 
@@ -51,6 +50,7 @@ fn validate_create_table(database: &Database, name: &ObjectName, columns: &Vec<C
             data_type,
             constraints,
             is_indexed,
+            order
         });
     }
 

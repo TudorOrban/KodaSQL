@@ -87,7 +87,7 @@ async fn process_request(request: Request) -> Result<String, Error> {
 async fn dispatch_statement(statement: &Statement) -> Result<String, Error> {
     match statement {
         Statement::Query(statement) => {
-            select_handler::handle_query(statement).await
+            select_handler::handle_select(statement).await
         },
         Statement::CreateTable { or_replace, temporary, external, global, if_not_exists, transient, name, columns, constraints, hive_distribution, hive_formats, table_properties, with_options, file_format, location, query, without_rowid, like, clone, engine, comment, auto_increment_offset, default_charset, collation, on_commit, on_cluster, order_by, partition_by, cluster_by, options, strict } => {
             create_table::create_table(&name, &columns).await

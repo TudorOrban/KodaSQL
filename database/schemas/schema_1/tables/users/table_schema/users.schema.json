@@ -5,25 +5,29 @@
             "name": "id",
             "data_type": "Integer",
             "constraints": ["NotNull", "Unique"],
-            "is_indexed": false
+            "is_indexed": false,
+            "order": 0
         },
         {
             "name": "username",
             "data_type": "Text",
             "constraints": ["NotNull"],
-            "is_indexed": false
+            "is_indexed": false,
+            "order": 1
         },
         {
             "name": "email",
             "data_type": "Text",
             "constraints": ["NotNull"],
-            "is_indexed": false
+            "is_indexed": false,
+            "order": 2
         },
         {
             "name": "age",
             "data_type": "Integer",
             "constraints": ["NotNull"],
-            "is_indexed": false
+            "is_indexed": false,
+            "order": 3
         }
     ]
 }

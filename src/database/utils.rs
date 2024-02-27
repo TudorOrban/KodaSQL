@@ -60,3 +60,11 @@ pub fn find_database_table<'a>(database: &'a Database, table_name: &str) -> Opti
         .find(|schema| &schema.name == default_schema)
         .and_then(|schema| schema.tables.iter().find(|table| &table.name == table_name))
 }
+
+pub fn get_headers_from_table_schema(table_schema: &TableSchema) -> Vec<String> {
+    let mut all_columns = table_schema.columns.clone();
+    all_columns.sort_by(|a, b| a.order.cmp(&b.order));
+    let headers: Vec<String> = all_columns.iter().map(|c| c.name.clone()).collect();
+
+    headers
+}
