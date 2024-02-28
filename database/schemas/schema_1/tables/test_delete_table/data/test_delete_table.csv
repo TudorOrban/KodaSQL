@@ -1,7 +1,6 @@
-id,username,age
-1,new,4
-1,new,4
-2312412421,Joe,Null
-23,J,Null
-3,n,Null
-4,d,Null
+id,username,age,new_test_column
+1,new,4,1
+1,new,4,1
+23,J,Null,Null
+3,n,Null,1
+4,d,Null,1

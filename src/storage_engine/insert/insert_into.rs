@@ -3,7 +3,7 @@ use csv::WriterBuilder;
 use std::fs::OpenOptions;
 
 use crate::database::database_loader;
-use crate::database::database_navigator;
+use crate::database::database_navigator::get_table_data_path;
 use crate::database::utils::find_database_table;
 use crate::shared::errors::Error;
 use crate::storage_engine::index::index_updater;
@@ -16,9 +16,14 @@ pub async fn insert_into_table(name: &ObjectName, columns: &Vec<Ident>, source: 
     
     // Validate insert
     let (table_name, _, complete_inserted_rows) = validator::validate_insert_into(&database, name, columns, source)?;
+    
+    let table_schema = match find_database_table(&database, &table_name) {
+        Some(schema) => schema,
+        None => return Err(Error::TableDoesNotExist { table_name: table_name.clone() }),
+    };
 
     // Open CSV file in append mode
-    let file_path = database_navigator::get_table_data_path(&database.configuration.default_schema, &table_name);
+    let file_path = get_table_data_path(&database.configuration.default_schema, &table_name);
     let modified_file = OpenOptions::new()
         .write(true).append(true).open(file_path)
         .map_err(|_| Error::TableDoesNotExist { table_name: table_name.clone() })?;
@@ -35,10 +40,6 @@ pub async fn insert_into_table(name: &ObjectName, columns: &Vec<Ident>, source: 
     wtr.flush().map_err(|_| Error::FailedTableWrite { table_name: table_name.clone() })?;
 
     // Write index offsets
-    let table_schema = match find_database_table(&database, &table_name) {
-        Some(schema) => schema,
-        None => return Err(Error::TableDoesNotExist { table_name: table_name.clone() }),
-    };
     index_updater::update_indexes_on_insert(&complete_inserted_rows, &database.configuration.default_schema, &table_name, table_schema)?;
 
     Ok(table_name)

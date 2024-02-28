@@ -4,7 +4,6 @@ use crate::database::types::{Database, InsertedRowColumn};
 use crate::database::utils::find_database_table;
 use crate::shared::errors::Error;
 use crate::storage_engine::validation;
-use crate::storage_engine::validation::common::does_table_exist;
 
 use super::utils;
 
@@ -14,9 +13,7 @@ pub fn validate_insert_into(database: &Database, name: &ObjectName, columns: &Ve
     let table_name = first_identifier.value.clone();
     
     // Validate table exists
-    if !does_table_exist(database, &table_name) {
-        return Err(Error::TableDoesNotExist { table_name: table_name });
-    }
+    validation::common::validate_table_exists(database, &table_name)?;
 
     let table_schema = match find_database_table(database, &table_name) {
         Some(schema) => schema,

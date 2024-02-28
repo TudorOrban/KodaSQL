@@ -34,6 +34,8 @@ pub enum Error {
 
     // Not supported
     GenericUnsupported,
+    
+    NotSupportedUpdateTableOperation,
 
     UnsupportedSelectClause,
     UnsupportedValueType { value: String },
@@ -81,6 +83,7 @@ impl fmt::Display for Error {
 
             // Not supported
             Error::GenericUnsupported => write!(f, "You're attempting an SQL operation that is not currently supported."),
+            Error::NotSupportedUpdateTableOperation => write!(f, "The Update Table operation you're attempting is not currently supported."),
             Error::UnsupportedSelectClause => write!(f, "The SELECT clause is not currently supported."),
             Error::UnsupportedValueType { value } => write!(f, "The value {} is not currently supported.", value),
             Error::UnsupportedColumnDataType { column_name, column_type } => write!(f, "The column type {} for column {} is not supported.", column_type, column_name),

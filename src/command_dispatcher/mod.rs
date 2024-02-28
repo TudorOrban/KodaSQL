@@ -12,7 +12,7 @@ use crate::storage_engine::delete::delete_table;
 use crate::storage_engine::insert::insert_into;
 use crate::storage_engine::select::select_handler;
 use crate::storage_engine::create::{create_schema, create_table};
-use crate::storage_engine::update::update_records;
+use crate::storage_engine::update::{update_records, update_table};
 
 pub async fn handle_request(socket: &mut TcpStream) {
     let mut buffer = [0; 4096];
@@ -115,6 +115,9 @@ async fn dispatch_statement(statement: &Statement) -> Result<String, Error> {
         }
         Statement::Update { table, assignments, from, selection, returning } => {
             update_records::update_records(table, assignments, selection)
+        }
+        Statement::AlterTable { name, if_exists, only, operations } => {
+            update_table::update_table(name, operations).await
         }
         _ => Err(Error::GenericUnsupported)
     }

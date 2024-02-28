@@ -1,7 +1,7 @@
 use csv::StringRecord;
 use sqlparser::ast::Query;
 
-use crate::{database::{self, database_loader, utils::get_headers_from_table_schema}, shared::errors::Error, storage_engine::{filters::filter_column_finder, select::table_reader, utils::ast_unwrapper}};
+use crate::{database::{self, database_loader}, shared::errors::Error, storage_engine::{filters::filter_column_finder, select::table_reader, utils::ast_unwrapper}};
 
 use super::{record_handler, types::SelectParameters, utils, validator};
 
@@ -15,7 +15,7 @@ pub async fn handle_select(query: &Query) -> Result<String, Error> {
         Some(schema) => schema,
         None => return Err(Error::TableDoesNotExist { table_name: table_name.clone() }),
     };
-    let headers = get_headers_from_table_schema(table_schema);
+    let headers = database::utils::get_headers_from_table_schema(table_schema);
     let column_indices = utils::get_column_indices(&headers, &columns);
     
     // Validate query

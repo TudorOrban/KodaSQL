@@ -3,13 +3,12 @@ use sqlparser::ast::{ColumnDef, ObjectName};
 
 use crate::database::database_navigator::{get_table_data_path, get_table_path, get_table_schema_path};
 use crate::database::types::Database;
-use crate::database::utils;
 use crate::shared::errors::Error;
 use crate::database::database_loader;
-use crate::database::types::{Column, TableSchema};
+use crate::database::types::TableSchema;
 use crate::shared::file_manager;
 use crate::storage_engine::index::index_manager;
-use crate::storage_engine::validation::common;
+use crate::storage_engine::validation;
 
 pub async fn create_table(name: &ObjectName, columns: &Vec<ColumnDef>) -> Result<String, Error> {
     let database = database_loader::get_database()?;
@@ -21,7 +20,7 @@ pub async fn create_table(name: &ObjectName, columns: &Vec<ColumnDef>) -> Result
 
     create_table_files(&default_schema_name, &table_schema).await?;
 
-    index_manager::create_indexes(&default_schema_name, &table_schema).await?;
+    index_manager::create_default_indexes(&default_schema_name, &table_schema).await?;
 
     update_schema_configuration(&default_schema_name, &table_schema.name).await
 }
@@ -31,28 +30,10 @@ fn validate_create_table(database: &Database, name: &ObjectName, columns: &Vec<C
     let table_name = first_identifier.value.clone();
     
     // Ensure table doesn't already exist
-    if common::does_table_exist(database, &table_name) {
-        return Err(Error::TableNameAlreadyExists { table_name: table_name });
-    }
+    validation::common::validate_table_doesnt_exist(database, &table_name)?;
 
     // Validate query columns and transform to custom schema types
-    let mut schema_columns: Vec<Column> = Vec::new();
-    for (column_index, column) in columns.iter().enumerate() {
-        let data_type = utils::get_column_custom_data_type(&column.data_type, &column.name.value)?;
-        let constraints = utils::get_column_custom_constraints(&column.options, &column.name.value)?;
-        let is_indexed = index_manager::index_strategy(&constraints);
-        let order = column_index;
-
-        // TODO: Validate there exists exactly one Primary Key
-
-        schema_columns.push(Column {
-            name: column.name.value.clone(),
-            data_type,
-            constraints,
-            is_indexed,
-            order
-        });
-    }
+    let schema_columns = validation::common::validate_column_definitions(columns)?;
 
     Ok(TableSchema { name: table_name, columns: schema_columns })
 }

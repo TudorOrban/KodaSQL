@@ -3,7 +3,7 @@ use std::{collections::HashMap, fs::File};
 use csv::{ReaderBuilder, StringRecord};
 use sqlparser::ast::{Assignment, Expr, TableWithJoins};
 
-use crate::{database::{self, database_loader, database_navigator::get_table_data_path, types::{Database, InsertedRowColumn}, utils::find_database_table}, shared::errors::Error, storage_engine::{filters::filter_manager::apply_filters, index::index_updater, select::{record_handler, utils}, utils::ast_unwrapper::{get_new_column_values, get_table_name_from_from}, validation::{self, common::does_table_exist}}};
+use crate::{database::{self, database_loader, database_navigator::get_table_data_path, types::{Database, InsertedRowColumn}, utils::find_database_table}, shared::errors::Error, storage_engine::{filters::filter_manager::apply_filters, index::index_updater, select::{record_handler, utils}, utils::ast_unwrapper::{get_new_column_values, get_table_name_from_from}, validation}};
 
 
 pub fn update_records(table: &TableWithJoins, assignments: &Vec<Assignment>, filters: &Option<Expr>) -> Result<String, Error> {
@@ -67,9 +67,7 @@ pub fn update_records(table: &TableWithJoins, assignments: &Vec<Assignment>, fil
 
 fn validate_update(database: &Database, table_name: &String, new_column_values: &HashMap<String, String>) -> Result<Vec<Vec<InsertedRowColumn>>, Error> {
     // Validate table exists
-    if !does_table_exist(database, table_name) {
-        return Err(Error::TableDoesNotExist { table_name: table_name.clone() });
-    }
+    validation::common::validate_table_exists(database, table_name)?;
 
     // Validate columns exist
     let table_schema = match find_database_table(database, &table_name) {
