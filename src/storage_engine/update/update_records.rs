@@ -6,7 +6,7 @@ use sqlparser::ast::{Assignment, Expr, TableWithJoins};
 use crate::{database::{self, database_loader, database_navigator::get_table_data_path, types::{Database, InsertedRowColumn}, utils::find_database_table}, shared::errors::Error, storage_engine::{filters::filter_manager::apply_filters, index::index_updater, select::{record_handler, utils}, utils::ast_unwrapper::{get_new_column_values, get_table_name_from_from}, validation}};
 
 
-pub fn update_records(table: &TableWithJoins, assignments: &Vec<Assignment>, filters: &Option<Expr>) -> Result<String, Error> {
+pub async fn update_records(table: &TableWithJoins, assignments: &Vec<Assignment>, filters: &Option<Expr>) -> Result<String, Error> {
     // Unwrap table name and new column values
     let table_name = get_table_name_from_from(table)?;
     let new_column_values = get_new_column_values(assignments)?;

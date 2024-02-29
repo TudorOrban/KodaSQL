@@ -3,6 +3,7 @@ pub mod create;
 pub mod insert;
 pub mod delete;
 pub mod update;
+pub mod alter_table;
 pub mod validation;
 pub mod index;
 pub mod filters;

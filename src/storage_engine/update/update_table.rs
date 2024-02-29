@@ -30,6 +30,10 @@ pub async fn update_table(name: &ObjectName, operations: &Vec<AlterTableOperatio
             AlterTableOperation::DropColumn { column_name, if_exists, cascade } => {
                 delete_column(column_name, &mut table_schema_clone).await?;
             }
+            AlterTableOperation::AddConstraint(r) => {
+                
+            }
+            // AlterTableOperation::AlterColumn { column_name, op }
             _ => return Err(Error::NotSupportedUpdateTableOperation)
         }
     }

@@ -1,9 +1,8 @@
 use tokio::net::TcpListener;
 
-use crate::command_dispatcher::handle_request;
 use crate::database::database_loader::load_database;
+use crate::command_dispatcher::request_handler;
 
-// Adjust the return type to include TcpListener for further use
 pub async fn initialize_server() -> Result<TcpListener, Box<dyn std::error::Error>> {
     load_database().await?;
 
@@ -14,13 +13,13 @@ pub async fn initialize_server() -> Result<TcpListener, Box<dyn std::error::Erro
     Ok(listener)
 }
 
-// New function to handle incoming connections
+// Start listening for requests and handling them
 pub async fn run_server(listener: TcpListener) {
     loop {
         match listener.accept().await {
             Ok((mut socket, _)) => {
                 tokio::spawn(async move {
-                    handle_request(&mut socket).await;
+                    request_handler::handle_request(&mut socket).await;
                 });
             },
             Err(e) => eprintln!("Failed to accept connection: {}", e),
