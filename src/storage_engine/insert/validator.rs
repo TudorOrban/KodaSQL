@@ -26,6 +26,10 @@ pub fn validate_insert_into(database: &Database, name: &ObjectName, columns: &Ve
         .map(|ident| ident.value.clone())
         .collect();
 
+    for column_name in column_names.iter() {
+        validation::common::validate_column_exists(table_schema, &column_name)?;
+    }
+
     let inserted_rows = utils::extract_inserted_rows(source, &column_names)?;
 
     validation::column_types::validate_column_types(table_schema, &inserted_rows)?;

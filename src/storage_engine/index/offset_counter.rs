@@ -60,7 +60,7 @@ pub fn compute_records_offsets(records: &Vec<StringRecord>, table_schema: &Table
 }
 
 pub fn compute_column_offsets(records: &Vec<StringRecord>, table_schema: &TableSchema, column_order: &usize) -> Vec<u64> {
-    let mut initial_offset = compute_headers_offset(table_schema);
+    let initial_offset = compute_headers_offset(table_schema);
     let mut column_offsets: Vec<u64> = Vec::new();
 
     for record in records.iter() {

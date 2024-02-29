@@ -1,7 +1,8 @@
 use sqlparser::ast::ColumnDef;
 
-use crate::{database::{self, types::{Column, Database}}, shared::errors::Error, storage_engine::index::index_manager};
+use crate::{database::{self, types::{Column, Database, TableSchema}}, shared::errors::Error, storage_engine::index::index_manager};
 
+// Table
 pub fn does_table_exist(database: &Database, table_name: &String) -> bool {
     let default_schema = database.configuration.default_schema.clone();
     if let Some(schema) = database.schemas.iter().find(|s| s.name == default_schema) {
@@ -20,7 +21,28 @@ pub fn validate_table_exists(database: &Database, table_name: &String) -> Result
 
 pub fn validate_table_doesnt_exist(database: &Database, table_name: &String) -> Result<(), Error> {
     if does_table_exist(database, table_name) {
-        return Err(Error::TableDoesNotExist { table_name: table_name.clone() });
+        return Err(Error::TableNameAlreadyExists { table_name: table_name.clone() });
+    }
+
+    Ok(())
+}
+
+// Column
+pub fn does_column_exist(table_schema: &TableSchema, column_name: &String) -> bool {
+    return table_schema.columns.iter().any(|c| &c.name == column_name);
+}
+
+pub fn validate_column_exists(table_schema: &TableSchema, column_name: &String) -> Result<(), Error> {
+    if !does_column_exist(table_schema, column_name) {
+        return Err(Error::ColumnDoesNotExist { column_name: column_name.clone(), table_name: table_schema.name.clone() })
+    }
+
+    Ok(())
+}
+
+pub fn validate_column_doesnt_exist(table_schema: &TableSchema, column_name: &String) -> Result<(), Error> {
+    if does_column_exist(table_schema, column_name) {
+        return Err(Error::ColumnNameAlreadyExists { column_name: column_name.clone() })
     }
 
     Ok(())

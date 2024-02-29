@@ -75,11 +75,7 @@ fn validate_update(database: &Database, table_name: &String, new_column_values: 
         None => return Err(Error::TableDoesNotExist { table_name: table_name.clone() }),
     };
     for (key, _) in new_column_values {
-        let potential_column = table_schema.columns.iter().find(|c| &c.name == key);
-        match potential_column {
-            Some(_) => continue,
-            None => return Err(Error::ColumnDoesNotExist { column_name: key.clone(), table_name: table_name.clone() })
-        }
+        validation::common::validate_column_exists(table_schema, key)?;
     }
 
     // Validate column types

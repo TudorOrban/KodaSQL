@@ -9,7 +9,7 @@ pub fn validate_column_constraints(inserted_rows: &Vec<Vec<InsertedRowColumn>>, 
     for column in table_schema.columns.clone() {
         let inserted_column_values = utils::get_inserted_column_values_from_rows(&inserted_rows, &column.name)?;
         
-        // Skip completing if complete flag is true (for update)
+        // Skip completing if complete flag is false (for update)
         let complete_column_values = if complete {
             validate_null_and_default_constraints(&column, &inserted_column_values)?
         } else {

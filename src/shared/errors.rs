@@ -27,6 +27,7 @@ pub enum Error {
 
     // Not allowed
     TableNameAlreadyExists { table_name: String },
+    ColumnNameAlreadyExists { column_name: String },
     ColumnTypeDoesNotMatch { column_name: String },
     NoPrimaryKeyPresent,
     ColumnUniquenessNotSatisfied { column_name: String, value: String },
@@ -76,6 +77,7 @@ impl fmt::Display for Error {
 
             // Not allowed
             Error::TableNameAlreadyExists { table_name } => write!(f, "Table name {} already exists.", table_name),
+            Error::ColumnNameAlreadyExists { column_name } => write!(f, "Column name {} already exists.", column_name),
             Error::ColumnTypeDoesNotMatch { column_name } => write!(f, "The type of the column {} does not match.", column_name),
             Error::NoPrimaryKeyPresent => write!(f, "Your query does not specify a primary key column."),
             Error::ColumnUniquenessNotSatisfied { column_name, value } => write!(f, "The uniqueness constraint of column {} is not satisifed by the value {}", column_name, value),

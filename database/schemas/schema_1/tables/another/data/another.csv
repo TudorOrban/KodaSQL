@@ -1,0 +1,5 @@
+id,username,age,new_column,new_column
+1,2,Null,Null,Null
+2,3,Null,Null,Null
+3,4,Null,123,Null
+4,5,Null,6,6
