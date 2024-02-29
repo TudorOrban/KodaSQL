@@ -6,18 +6,27 @@ use super::handle_bulk_operations::handle_bulk_operations;
 
 
 pub async fn dispatch_alter_table_statement(name: &ObjectName, operations: &Vec<AlterTableOperation>) -> Result<String, Error> {
+    let first_identifier = name.0.first().ok_or(Error::MissingTableName)?;
+    let table_name = first_identifier.value.clone();
+    
     let database = database_loader::get_database()?;
+    // let schema_name = database.configuration.default_schema.clone();
+    // let table_schema = match database::utils::find_database_table(&database, &table_name) {
+    //     Some(schema) => schema,
+    //     None => return Err(Error::TableDoesNotExist { table_name: table_name.clone() }),
+    // };
+    // let mut table_schema_clone = table_schema.clone();
 
-    let bulk_operations: Vec<AlterTableOperation> = operations.into_iter().filter(|op| bulk_operation_policy(op)).cloned().collect();
-    let other_operations: Vec<AlterTableOperation> = operations.iter().filter(|op| !bulk_operation_policy(op)).cloned().collect();
+    let bulk_operations: Vec<AlterTableOperation> = operations.into_iter().filter(|op| bulk_operation_strategy(op)).cloned().collect();
+    let other_operations: Vec<AlterTableOperation> = operations.iter().filter(|op| !bulk_operation_strategy(op)).cloned().collect();
 
     let mut responses: Vec<String> = Vec::new();
 
-    handle_bulk_operations(name, &bulk_operations).await?;
+    handle_bulk_operations(&table_name, &bulk_operations, &database).await?;
 
 
 
-    
+
 
     for operation in other_operations {
         match operation {
@@ -37,7 +46,7 @@ pub async fn dispatch_alter_table_statement(name: &ObjectName, operations: &Vec<
     Ok(format!("Success: the table has been altered successfully."))
 }
 
-fn bulk_operation_policy(operation: &AlterTableOperation) -> bool {
+fn bulk_operation_strategy(operation: &AlterTableOperation) -> bool {
     match operation {
         AlterTableOperation::AddColumn { .. } => true,
         AlterTableOperation::DropColumn { .. } => true,

@@ -33,7 +33,7 @@ fn validate_create_table(database: &Database, name: &ObjectName, columns: &Vec<C
     validation::common::validate_table_doesnt_exist(database, &table_name)?;
 
     // Validate query columns and transform to custom schema types
-    let schema_columns = validation::common::validate_column_definitions(columns)?;
+    let schema_columns = validation::common::validate_column_definitions(columns, &(0..columns.len() - 1).collect())?;
 
     Ok(TableSchema { name: table_name, columns: schema_columns })
 }
