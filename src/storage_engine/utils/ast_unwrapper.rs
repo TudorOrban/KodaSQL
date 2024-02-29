@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use sqlparser::ast::{Assignment, Expr, OrderByExpr, Query, Select, SelectItem, TableFactor, TableWithJoins, Value};
+use sqlparser::ast::{AlterTableOperation, Assignment, ColumnDef, ColumnOptionDef, Expr, Ident, OrderByExpr, Query, Select, SelectItem, TableFactor, TableWithJoins, Value};
 
 use crate::{shared::errors::Error, storage_engine::select::types::SelectParameters};
 
@@ -121,4 +121,33 @@ pub fn get_new_column_values(assignments: &Vec<Assignment>) -> Result<HashMap<St
     }
 
     Ok(new_column_values)
+}
+
+pub fn get_column_definitions_from_alter_table_ops(columns_ops: &Vec<AlterTableOperation>) -> Vec<ColumnDef> {
+    let new_columns_definitions: Vec<ColumnDef> = columns_ops.iter().filter_map(|op| {
+        if let AlterTableOperation::ChangeColumn { new_name, data_type, options, .. } = op {
+            // Transform each ColumnOption into a ColumnOptionDef
+            let options_def: Vec<ColumnOptionDef> = options.iter().map(|option| {
+                ColumnOptionDef {
+                    name: Some(Ident {
+                        value: new_name.value.clone(),
+                        quote_style: new_name.quote_style,
+                    }),
+                    option: option.clone(),
+                }
+            }).collect();
+    
+            let column_def = ColumnDef {
+                name: new_name.clone(),
+                data_type: data_type.clone(),
+                collation: None,
+                options: options_def
+            };
+            Some(column_def)
+        } else {
+            None
+        }
+    }).collect();
+
+    new_columns_definitions
 }

@@ -51,7 +51,6 @@ fn bulk_operation_strategy(operation: &AlterTableOperation) -> bool {
         AlterTableOperation::AddColumn { .. } => true,
         AlterTableOperation::DropColumn { .. } => true,
         AlterTableOperation::ChangeColumn { .. } => true,
-        AlterTableOperation::RenameColumn { .. } => true,
         _ => false
     }
 }
