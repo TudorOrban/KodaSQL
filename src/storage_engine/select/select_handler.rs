@@ -1,7 +1,9 @@
 use csv::StringRecord;
 use sqlparser::ast::Query;
 
-use crate::{database::{self, database_loader}, shared::errors::Error, storage_engine::{filters::filter_column_finder, select::table_reader, utils::ast_unwrapper}};
+use crate::database::{self, database_loader};
+use crate::shared::errors::Error;
+use crate::storage_engine::{filters::filter_column_finder, select::table_reader, utils::ast_unwrapper};
 
 use super::{record_handler, types::SelectParameters, utils, validator};
 

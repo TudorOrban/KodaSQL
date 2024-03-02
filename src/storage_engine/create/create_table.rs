@@ -33,7 +33,7 @@ fn validate_create_table(database: &Database, name: &ObjectName, columns: &Vec<C
     validation::common::validate_table_doesnt_exist(database, &table_name)?;
 
     // Validate query columns and transform to custom schema types
-    let schema_columns = validation::common::validate_column_definitions(columns, &(0..columns.len() - 1).collect())?;
+    let schema_columns = validation::common::validate_column_definitions(columns, &(0..columns.len()).collect())?;
 
     Ok(TableSchema { name: table_name, columns: schema_columns })
 }
@@ -69,9 +69,9 @@ async fn update_schema_configuration(schema_name: &String, table_name: &String) 
 
     database_loader::save_schema_configuration(&schema_name, &schema_config).await?;
 
-    // TODO: Reload schema into memory
+    database_loader::reload_schema(schema_name).await?;
     
-    Ok(String::from(""))
+    Ok(format!("Success: table {} has been created successfully.", table_name))
 }
 
 /*

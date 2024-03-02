@@ -22,7 +22,7 @@ pub async fn delete_table(names: &Vec<ObjectName>) -> Result<String, Error> {
     schema_configuration.tables = schema_configuration.tables.into_iter().filter(|table| table != &table_name).collect();
     file_manager::write_json_into_file(&schema_configuration_file_path, &schema_configuration)?;
 
-    // TODO: Reload database
+    database_loader::reload_schema(&schema_name).await?;
     
     Ok(format!("Success: table {} has been deleted.", table_name))
 }

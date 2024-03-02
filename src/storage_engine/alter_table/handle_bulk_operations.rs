@@ -3,7 +3,7 @@ use std::fs::OpenOptions;
 use csv::{StringRecord, WriterBuilder};
 use sqlparser::ast::AlterTableOperation;
 
-use crate::database::{self, database_navigator::{get_table_data_path, get_table_schema_path}, types::{Column, Database, TableSchema}, utils::get_headers_from_table_schema};
+use crate::database::{self, database_loader, database_navigator::{get_table_data_path, get_table_schema_path}, types::{Column, Database, TableSchema}, utils::get_headers_from_table_schema};
 use crate::storage_engine::{index::{index_manager, index_updater}, select::{table_reader, utils::get_column_indices}};
 use crate::shared::{errors::Error, file_manager::write_json_into_file};
 
@@ -48,6 +48,9 @@ pub async fn handle_bulk_operations(table_name: &String, operations: &Vec<AlterT
 
     // Update indexes
     index_updater::update_indexes_on_update_or_delete(&records, &schema_name, table_name, &new_table_schema)?;
+
+    // Reload table schema
+    database_loader::reload_table_schema(&schema_name, table_name).await?;
 
     Ok(())
 }

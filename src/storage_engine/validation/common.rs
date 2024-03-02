@@ -67,6 +67,7 @@ pub fn validate_columns_dont_exist(table_schema: &TableSchema, column_names: &Ve
 
 pub fn validate_column_definitions(column_definitions: &Vec<ColumnDef>, order: &Vec<usize>) -> Result<Vec<Column>, Error> {
     let mut schema_columns: Vec<Column> = Vec::new();
+    println!("Column def: {:?}, order: {:?}", column_definitions, order);
     for (column_index, column_def) in column_definitions.iter().enumerate() {
         let column = validate_column_definition(column_def, order[column_index])?;
         // TODO: Validate there exists exactly one Primary Key
