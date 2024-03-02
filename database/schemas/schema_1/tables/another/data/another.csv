@@ -1,8 +1,9 @@
-id,username,age,new_column,new_column,test_bulk_changed,test_bulk_add
+id,username,age,new_column,new_column,test_bulk_changed_2,test_bulk_add_2
 1,2,Null,Null,Null,Null,Null
 3,4,Null,123,Null,Null,Null
 4,5,Null,6,6,Null,Null
 5,6,Null,7,7,Null,Null
 6,7,Null,132,132,Null,Null
 7,8,Null,13,13,Null,Null
-8,9,Null,10,10,Null,23
+8,9,Null,10,10,Null,Null
+9,10,Null,12,12,Null,213
