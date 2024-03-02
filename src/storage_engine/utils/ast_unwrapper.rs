@@ -123,7 +123,7 @@ pub fn get_new_column_values(assignments: &Vec<Assignment>) -> Result<HashMap<St
     Ok(new_column_values)
 }
 
-pub fn get_column_definitions_from_alter_table_ops(columns_ops: &Vec<AlterTableOperation>) -> Vec<ColumnDef> {
+pub fn get_column_definitions_from_change_columns_ops(columns_ops: &Vec<AlterTableOperation>) -> Vec<ColumnDef> {
     let new_columns_definitions: Vec<ColumnDef> = columns_ops.iter().filter_map(|op| {
         if let AlterTableOperation::ChangeColumn { new_name, data_type, options, .. } = op {
             // Transform each ColumnOption into a ColumnOptionDef
