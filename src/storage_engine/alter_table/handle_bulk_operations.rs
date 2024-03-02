@@ -1,6 +1,6 @@
 use std::fs::OpenOptions;
 
-use csv::{StringRecord, WriterBuilder};
+use csv::WriterBuilder;
 use sqlparser::ast::AlterTableOperation;
 
 use crate::database::{self, database_navigator::{get_table_data_path, get_table_schema_path}, types::{Column, Database, TableSchema}, utils::get_headers_from_table_schema};
@@ -17,19 +17,21 @@ pub async fn handle_bulk_operations(table_name: &String, operations: &Vec<AlterT
         None => return Err(Error::TableDoesNotExist { table_name: table_name.clone() }),
     };
     
-    // Validate oeprations and get schema types from it
-    let (delete_columns_names, changed_columns, new_columns) = validate_bulk_operations(table_name, table_schema, operations, database)?;
-    
+    // Validate operations and get schema types from it
+    let (delete_columns_names, old_column_names, changed_columns, new_columns) = validate_bulk_operations(table_name, table_schema, operations, database)?;
     let new_columns_names: Vec<String> = new_columns.iter().map(|col| col.name.clone()).collect();
     
     // Update table schema
-    let mut new_table_schema = update_table_schema_in_bulk(table_schema, &delete_columns_names, &changed_columns, &new_columns)?;
+    let mut new_table_schema = update_table_schema_in_bulk(table_schema, &delete_columns_names, &old_column_names, &changed_columns, &new_columns)?;
     let table_schema_file_path = get_table_schema_path(&schema_name, table_name);
     write_json_into_file(&table_schema_file_path, &new_table_schema)?;
 
     // Get headers from new schema and delete indices
-    let headers = get_headers_from_table_schema(&new_table_schema);
-    let deleted_columns_indices = get_column_indices(&headers, &delete_columns_names);
+    let old_headers = get_headers_from_table_schema(&table_schema);
+    let new_headers = get_headers_from_table_schema(&new_table_schema);
+    let deleted_columns_indices = get_column_indices(&old_headers, &delete_columns_names);
+    println!("Headers: {:?}, delete indices: {:?}", new_headers, deleted_columns_indices);
+    
 
     // Read current records into memory
     let mut records = table_reader::read_table(&schema_name, table_name, &None, true).await?;
@@ -43,7 +45,7 @@ pub async fn handle_bulk_operations(table_name: &String, operations: &Vec<AlterT
     let mut wtr = WriterBuilder::new().has_headers(false).from_writer(modified_file);
 
     // Write updated headers
-    wtr.write_record(&headers)
+    wtr.write_record(&new_headers)
         .map_err(|_| Error::FailedTableWrite { table_name: table_name.clone() })?;
 
     // Rewrite records
@@ -67,12 +69,13 @@ pub async fn handle_bulk_operations(table_name: &String, operations: &Vec<AlterT
             fields.push(String::from("Null"));
         }
 
-
         // Convert back to StringRecord
-        let mut new_record = StringRecord::new();
-        for field in fields.iter() {
-            new_record.push_field(field);
+        println!("Old record: {:?}", record);
+        record.clear();
+        for field in &fields {
+            record.push_field(field);
         }
+        println!("New record: {:?}", record);
 
         // Write record
         wtr.write_record(&*record)
@@ -89,12 +92,12 @@ pub async fn handle_bulk_operations(table_name: &String, operations: &Vec<AlterT
     }
 
     // Update indexes
-    index_updater::update_indexes_on_update_or_delete(&records, &schema_name, table_name, table_schema)?;
+    index_updater::update_indexes_on_update_or_delete(&records, &schema_name, table_name, &new_table_schema)?;
 
     Ok(())
 }
 
-fn validate_bulk_operations(table_name: &String, table_schema: &TableSchema, operations: &Vec<AlterTableOperation>, database: &Database) -> Result<(Vec<String>, Vec<Column>, Vec<Column>), Error> {
+fn validate_bulk_operations(table_name: &String, table_schema: &TableSchema, operations: &Vec<AlterTableOperation>, database: &Database) -> Result<(Vec<String>, Vec<String>, Vec<Column>, Vec<Column>), Error> {
     // Validate table exists
     validation::common::validate_table_exists(database, table_name)?;
     
@@ -106,7 +109,7 @@ fn validate_bulk_operations(table_name: &String, table_schema: &TableSchema, ope
     let mut delete_column_names: Vec<String> = Vec::new();
 
     for op in delete_columns_ops.iter() {
-        if let AlterTableOperation::DropColumn { column_name, if_exists, cascade } = op {
+        if let AlterTableOperation::DropColumn { column_name, .. } = op {
             validate_column_exists(&table_schema, &column_name.value)?;
             delete_column_names.push(column_name.value.clone());
         }
@@ -115,7 +118,7 @@ fn validate_bulk_operations(table_name: &String, table_schema: &TableSchema, ope
     // Validate columns to be changed exist
     for op in changed_columns_ops.iter() {
         match op {
-            AlterTableOperation::ChangeColumn { old_name, new_name, data_type, options } => {
+            AlterTableOperation::ChangeColumn { old_name, .. } => {
                 validate_column_exists(&table_schema, &old_name.value)?;
             }
             _ => continue
@@ -123,9 +126,9 @@ fn validate_bulk_operations(table_name: &String, table_schema: &TableSchema, ope
     }
 
     // Validate column definitions for columns to be changed
-    let changed_columns_definitions = ast_unwrapper::get_column_definitions_from_change_columns_ops(&changed_columns_ops);
-    let changed_columns = validation::common::validate_column_definitions(&changed_columns_definitions, &Vec::new())?;
-
+    let (old_changed_column_names, changed_columns_definitions) = ast_unwrapper::get_column_definitions_from_change_columns_ops(&changed_columns_ops);
+    let changed_columns = validation::common::validate_column_definitions(&changed_columns_definitions, &(0..changed_columns_definitions.len()).collect())?;
+    
     // Validate column definitions for new columns 
     let new_columns_definitions = new_columns_ops.iter().filter_map(|op| {
         if let AlterTableOperation::AddColumn { column_def, .. } = op {
@@ -134,24 +137,24 @@ fn validate_bulk_operations(table_name: &String, table_schema: &TableSchema, ope
             None
         }
     }).cloned().collect();
-    let new_columns = validation::common::validate_column_definitions(&new_columns_definitions, &Vec::new())?;
+    let new_columns = validation::common::validate_column_definitions(&new_columns_definitions, &(0..new_columns_definitions.len()).collect())?;
 
-    Ok((delete_column_names, changed_columns, new_columns))
+    Ok((delete_column_names, old_changed_column_names, changed_columns, new_columns))
 }
 
-fn update_table_schema_in_bulk(table_schema: &TableSchema, delete_column_names: &Vec<String>, changed_columns: &Vec<Column>, new_columns: &Vec<Column>) -> Result<TableSchema, Error> {
+fn update_table_schema_in_bulk(table_schema: &TableSchema, delete_column_names: &Vec<String>, old_column_names: &Vec<String>, changed_columns: &Vec<Column>, new_columns: &Vec<Column>) -> Result<TableSchema, Error> {
     // Remove deleted columns from the schema
     let mut updated_columns: Vec<Column> = table_schema.columns.iter()
         .filter(|col| !delete_column_names.contains(&col.name))
         .cloned().collect();
 
     // Update definitions for changed columns
-    for col in updated_columns.iter_mut() {
-        if let Some(changed_col) = changed_columns.iter().find(|c| c.name == col.name) {
-            col.name = changed_col.name.clone(); // TODO: Flawed, fix to find by old name
+    for (old_name, changed_col) in old_column_names.iter().zip(changed_columns.iter()) {
+        if let Some(col) = updated_columns.iter_mut().find(|c| c.name == *old_name) {
+            col.name = changed_col.name.clone();
             col.data_type = changed_col.data_type.clone();
             col.constraints = changed_col.constraints.clone();
-            col.is_indexed = changed_col.is_indexed.clone();
+            col.is_indexed = changed_col.is_indexed;
         }
     }
 
@@ -173,10 +176,10 @@ fn update_table_schema_in_bulk(table_schema: &TableSchema, delete_column_names: 
 }
 
 
-fn update_table_data_in_bulk() -> Result<(), Error> {
+// fn update_table_data_in_bulk() -> Result<(), Error> {
 
-    Ok(())
-}
+//     Ok(())
+// }
 
 
 

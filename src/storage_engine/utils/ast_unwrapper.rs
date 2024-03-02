@@ -123,9 +123,10 @@ pub fn get_new_column_values(assignments: &Vec<Assignment>) -> Result<HashMap<St
     Ok(new_column_values)
 }
 
-pub fn get_column_definitions_from_change_columns_ops(columns_ops: &Vec<AlterTableOperation>) -> Vec<ColumnDef> {
+pub fn get_column_definitions_from_change_columns_ops(columns_ops: &Vec<AlterTableOperation>) -> (Vec<String>, Vec<ColumnDef>) {
+    let mut old_column_names: Vec<String> = Vec::new();
     let new_columns_definitions: Vec<ColumnDef> = columns_ops.iter().filter_map(|op| {
-        if let AlterTableOperation::ChangeColumn { new_name, data_type, options, .. } = op {
+        if let AlterTableOperation::ChangeColumn { new_name, data_type, options, old_name } = op {
             // Transform each ColumnOption into a ColumnOptionDef
             let options_def: Vec<ColumnOptionDef> = options.iter().map(|option| {
                 ColumnOptionDef {
@@ -143,11 +144,14 @@ pub fn get_column_definitions_from_change_columns_ops(columns_ops: &Vec<AlterTab
                 collation: None,
                 options: options_def
             };
+
+            old_column_names.push(old_name.value.clone());
+
             Some(column_def)
         } else {
             None
         }
     }).collect();
 
-    new_columns_definitions
+    (old_column_names, new_columns_definitions)
 }

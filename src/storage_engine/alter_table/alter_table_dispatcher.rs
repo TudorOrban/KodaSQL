@@ -20,8 +20,6 @@ pub async fn dispatch_alter_table_statement(name: &ObjectName, operations: &Vec<
     let bulk_operations: Vec<AlterTableOperation> = operations.into_iter().filter(|op| bulk_operation_strategy(op)).cloned().collect();
     let other_operations: Vec<AlterTableOperation> = operations.iter().filter(|op| !bulk_operation_strategy(op)).cloned().collect();
 
-    let mut responses: Vec<String> = Vec::new();
-
     handle_bulk_operations(&table_name, &bulk_operations, &database).await?;
 
 

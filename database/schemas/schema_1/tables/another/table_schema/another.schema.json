@@ -1,1 +1,54 @@
-{"name":"another","columns":[{"name":"id","data_type":"Integer","constraints":["PrimaryKey"],"is_indexed":true,"order":0},{"name":"username","data_type":"Integer","constraints":["Unique","NotNull"],"is_indexed":true,"order":1},{"name":"age","data_type":"Integer","constraints":[],"is_indexed":false,"order":2},{"name":"new_column","data_type":"Integer","constraints":[],"is_indexed":true,"order":3},{"name":"new_column","data_type":"Integer","constraints":["PrimaryKey"],"is_indexed":true,"order":4}]}
+{
+    "name": "another",
+    "columns": [
+        {
+            "name": "id",
+            "data_type": "Integer",
+            "constraints": ["PrimaryKey"],
+            "is_indexed": true,
+            "order": 0
+        },
+        {
+            "name": "username",
+            "data_type": "Integer",
+            "constraints": ["Unique", "NotNull"],
+            "is_indexed": true,
+            "order": 1
+        },
+        {
+            "name": "age",
+            "data_type": "Integer",
+            "constraints": [],
+            "is_indexed": false,
+            "order": 2
+        },
+        {
+            "name": "new_column",
+            "data_type": "Integer",
+            "constraints": [],
+            "is_indexed": true,
+            "order": 3
+        },
+        {
+            "name": "new_column",
+            "data_type": "Integer",
+            "constraints": ["PrimaryKey"],
+            "is_indexed": true,
+            "order": 4
+        },
+        {
+            "name": "test_bulk_changed",
+            "data_type": "Integer",
+            "constraints": [],
+            "is_indexed": false,
+            "order": 5
+        },
+        {
+            "name": "test_bulk_add",
+            "data_type": "Text",
+            "constraints": ["Unique"],
+            "is_indexed": true,
+            "order": 6
+        }
+    ]
+}
