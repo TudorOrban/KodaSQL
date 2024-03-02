@@ -58,7 +58,7 @@ pub async fn handle_request(socket: &mut TcpStream) {
 }
 
 
-async fn process_request(request: Request) -> Result<String, Error> {
+pub async fn process_request(request: Request) -> Result<String, Error> {
     let sql = &request.sql;
 
     // Parse request into AST

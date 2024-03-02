@@ -1,2 +1,2 @@
 pub mod request_handler;
-mod statement_dispatcher;
+pub mod statement_dispatcher;

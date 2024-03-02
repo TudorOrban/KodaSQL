@@ -43,7 +43,7 @@ pub struct SchemaConfiguration {
     pub tables: Vec<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct TableSchema {
     pub name: String,
     pub columns: Vec<Column>

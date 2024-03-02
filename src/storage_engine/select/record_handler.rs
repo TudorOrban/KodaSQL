@@ -34,7 +34,7 @@ pub fn format_response(rows: Vec<StringRecord>, selected_headers: Vec<String>, i
         let mut row_map: HashMap<String, String> = HashMap::new();
         indices.iter().enumerate().for_each(|(i, &index)| {
             if let Some(value) = row.get(i) {
-                let header = &selected_headers[index]; // Correctly map selected headers based on indices
+                let header = &selected_headers[index]; // Map selected headers based on indices
                 row_map.insert(header.clone(), value.to_string());
             }
         });
