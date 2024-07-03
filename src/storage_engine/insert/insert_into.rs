@@ -15,6 +15,7 @@ pub async fn insert_into_table(name: &ObjectName, columns: &Vec<Ident>, source: 
     let database = database_loader::get_database()?;
     
     // Validate insert
+    // Needs additional checks from newly introduced features
     let (table_name, _, complete_inserted_rows) = validator::validate_insert_into(&database, name, columns, source)?;
     
     let table_schema = match find_database_table(&database, &table_name) {
