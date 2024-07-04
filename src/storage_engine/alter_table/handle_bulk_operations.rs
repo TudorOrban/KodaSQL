@@ -10,7 +10,8 @@ use crate::shared::{errors::Error, file_manager::write_json_into_file};
 use super::validator;
 
 /*
- * Function to add, delete or change table columns in bulk
+ * Function to add, delete or change table columns in bulk.
+ * It will be reworked in the future
  */
 pub async fn handle_bulk_operations(table_name: &String, operations: &Vec<AlterTableOperation>, database: &Database) -> Result<(), Error> {
     let schema_name = database.configuration.default_schema.clone();
