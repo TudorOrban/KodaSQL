@@ -89,10 +89,11 @@ pub struct ForeignKey {
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub enum ReferentialAction {
+    Restrict,
     Cascade,
     SetNull,
     NoAction,
-    Restrict,
+    SetDefault,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

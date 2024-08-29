@@ -1,1 +1,21 @@
-{"name":"users","columns":[{"name":"id","data_type":"Integer","constraints":["NotNull","Unique"],"is_indexed":false,"order":0},{"name":"username","data_type":"Text","constraints":["NotNull"],"is_indexed":false,"order":1},{"name":"email","data_type":"Text","constraints":["NotNull"],"is_indexed":false,"order":2},{"name":"age","data_type":"Integer","constraints":["NotNull"],"is_indexed":false,"order":3},{"name":"new_new","data_type":"Integer","constraints":[],"is_indexed":false,"order":4}]}
+{
+    "name": "users",
+    "columns": [
+        { "name": "id", "data_type": "Integer", "constraints": ["NotNull", "Unique"], "is_indexed": false, "order": 0 },
+        { "name": "username", "data_type": "Text", "constraints": ["NotNull"], "is_indexed": false, "order": 1 },
+        { "name": "email", "data_type": "Text", "constraints": ["NotNull"], "is_indexed": false, "order": 2 },
+        { "name": "age", "data_type": "Integer", "constraints": ["NotNull"], "is_indexed": false, "order": 3 },
+        { "name": "new_new", "data_type": "Integer", "constraints": [], "is_indexed": false, "order": 4 }
+    ],
+    "foreign_keys": [
+        {
+            "name": "fk_final_test_table_1",
+            "local_table": "final_test_table",
+            "local_columns": ["user_id"],
+            "foreign_table": "users",
+            "foreign_columns": ["id"],
+            "on_delete": "Cascade",
+            "on_update": "Cascade"
+        }
+    ]
+}

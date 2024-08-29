@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use sqlparser::ast::{AlterTableOperation, Assignment, ColumnDef, ColumnOptionDef, Expr, Ident, OrderByExpr, Query, Select, SelectItem, TableFactor, TableWithJoins, Value};
 
-use crate::{shared::errors::Error, storage_engine::select::types::SelectParameters};
+use crate::{database::types::ReferentialAction, shared::errors::Error, storage_engine::select::types::SelectParameters};
 
 
 pub fn unwrap_select_query(query: &Query) -> Result<SelectParameters, Error> {
@@ -154,4 +154,20 @@ pub fn get_column_definitions_from_change_columns_ops(columns_ops: &Vec<AlterTab
     }).collect();
 
     (old_column_names, new_columns_definitions)
+}
+
+pub fn get_referential_action(action: &Option<sqlparser::ast::ReferentialAction>) -> Result<ReferentialAction, Error> {
+    if let Some(action) = action {
+        let action_str = match action {
+            sqlparser::ast::ReferentialAction::NoAction => ReferentialAction::NoAction,
+            sqlparser::ast::ReferentialAction::Cascade => ReferentialAction::Cascade,
+            sqlparser::ast::ReferentialAction::SetNull => ReferentialAction::SetNull,
+            sqlparser::ast::ReferentialAction::SetDefault => ReferentialAction::SetDefault,
+            sqlparser::ast::ReferentialAction::Restrict => ReferentialAction::Restrict,
+        };
+    
+        Ok(action_str)
+    } else {
+        Ok(ReferentialAction::NoAction)
+    }
 }

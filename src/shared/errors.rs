@@ -23,6 +23,7 @@ pub enum Error {
     InvalidLimit { limit: String },
 
     // Missing
+    MissingSchemaName,
     MissingTableName,
 
     // Not allowed
@@ -32,6 +33,7 @@ pub enum Error {
     NoPrimaryKeyPresent,
     ColumnUniquenessNotSatisfied { column_name: String, value: String },
     ColumnNotNull { column_name: String },
+    ForeignKeyAlreadyExists { foreign_key_name: String },
 
     // Not supported
     GenericUnsupported,
@@ -73,6 +75,7 @@ impl fmt::Display for Error {
             Error::InvalidLimit { limit } => write!(f, "The provided limit {} is invalid.", limit),
             
             // Missing
+            Error::MissingSchemaName => write!(f, "Missing schema name."),
             Error::MissingTableName => write!(f, "Missing table name."),
 
             // Not allowed
@@ -82,6 +85,7 @@ impl fmt::Display for Error {
             Error::NoPrimaryKeyPresent => write!(f, "Your query does not specify a primary key column."),
             Error::ColumnUniquenessNotSatisfied { column_name, value } => write!(f, "The uniqueness constraint of column {} is not satisifed by the value {}", column_name, value),
             Error::ColumnNotNull { column_name } => write!(f, "A null value has been provided for the column {} having a non-null constraint", column_name),
+            Error::ForeignKeyAlreadyExists { foreign_key_name } => write!(f, "Foreign key {} already exists.", foreign_key_name),
 
             // Not supported
             Error::GenericUnsupported => write!(f, "You're attempting an SQL operation that is not currently supported."),

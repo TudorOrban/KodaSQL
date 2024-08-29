@@ -1,1 +1,26 @@
-{"name":"final_test_table","columns":[{"name":"id","data_type":"Integer","constraints":["PrimaryKey"],"is_indexed":true,"order":0},{"name":"username","data_type":"Integer","constraints":["Unique"],"is_indexed":true,"order":1},{"name":"age","data_type":"Integer","constraints":["NotNull"],"is_indexed":false,"order":2},{"name":"email","data_type":"Integer","constraints":["NotNull",{"DefaultValue":"3"}],"is_indexed":false,"order":3}]}
+{
+    "name": "final_test_table",
+    "columns": [
+        { "name": "id", "data_type": "Integer", "constraints": ["PrimaryKey"], "is_indexed": true, "order": 0 },
+        { "name": "username", "data_type": "Integer", "constraints": ["Unique"], "is_indexed": true, "order": 1 },
+        { "name": "age", "data_type": "Integer", "constraints": ["NotNull"], "is_indexed": false, "order": 2 },
+        {
+            "name": "email",
+            "data_type": "Integer",
+            "constraints": ["NotNull", { "DefaultValue": "3" }],
+            "is_indexed": false,
+            "order": 3
+        }
+    ],
+    "foreign_keys": [
+        {
+            "name": "fk_final_test_table_1",
+            "local_table": "final_test_table",
+            "local_columns": ["user_id"],
+            "foreign_table": "users",
+            "foreign_columns": ["id"],
+            "on_delete": "Cascade",
+            "on_update": "Cascade"
+        }
+    ]
+}

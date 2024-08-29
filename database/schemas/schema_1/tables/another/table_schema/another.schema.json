@@ -1,1 +1,37 @@
-{"name":"another","columns":[{"name":"id","data_type":"Integer","constraints":["PrimaryKey"],"is_indexed":true,"order":0},{"name":"username","data_type":"Integer","constraints":["Unique","NotNull"],"is_indexed":true,"order":1},{"name":"age","data_type":"Integer","constraints":[],"is_indexed":false,"order":2},{"name":"new_column","data_type":"Integer","constraints":[],"is_indexed":true,"order":3},{"name":"new_column","data_type":"Integer","constraints":["PrimaryKey"],"is_indexed":true,"order":4},{"name":"test_bulk_changed_2","data_type":"Text","constraints":[],"is_indexed":false,"order":5},{"name":"test_bulk_add_2","data_type":"Integer","constraints":["PrimaryKey"],"is_indexed":true,"order":6},{"name":"test_bulk_add_3","data_type":"Integer","constraints":[],"is_indexed":false,"order":7},{"name":"test_reload_column","data_type":"Integer","constraints":[],"is_indexed":false,"order":8}]}
+{
+    "name": "another",
+    "columns": [
+        { "name": "id", "data_type": "Integer", "constraints": ["PrimaryKey"], "is_indexed": true, "order": 0 },
+        {
+            "name": "username",
+            "data_type": "Integer",
+            "constraints": ["Unique", "NotNull"],
+            "is_indexed": true,
+            "order": 1
+        },
+        { "name": "age", "data_type": "Integer", "constraints": [], "is_indexed": false, "order": 2 },
+        { "name": "new_column", "data_type": "Integer", "constraints": [], "is_indexed": true, "order": 3 },
+        { "name": "new_column", "data_type": "Integer", "constraints": ["PrimaryKey"], "is_indexed": true, "order": 4 },
+        { "name": "test_bulk_changed_2", "data_type": "Text", "constraints": [], "is_indexed": false, "order": 5 },
+        {
+            "name": "test_bulk_add_2",
+            "data_type": "Integer",
+            "constraints": ["PrimaryKey"],
+            "is_indexed": true,
+            "order": 6
+        },
+        { "name": "test_bulk_add_3", "data_type": "Integer", "constraints": [], "is_indexed": false, "order": 7 },
+        { "name": "test_reload_column", "data_type": "Integer", "constraints": [], "is_indexed": false, "order": 8 }
+    ],
+    "foreign_keys": [
+        {
+            "name": "fk_final_test_table_1",
+            "local_table": "final_test_table",
+            "local_columns": ["user_id"],
+            "foreign_table": "users",
+            "foreign_columns": ["id"],
+            "on_delete": "Cascade",
+            "on_update": "Cascade"
+        }
+    ]
+}

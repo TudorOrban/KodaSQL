@@ -60,12 +60,3 @@ pub fn get_table_index_path(schema_name: &String, table_name: &String, column_na
 pub fn get_table_row_index_path(schema_name: &String, table_name: &String) -> String {
     format!("{}/{}.index.json", get_table_indexes_dir_path(schema_name, table_name), String::from("row_offsets"))
 }
-
-// Table foreign keys
-pub fn get_table_foreign_keys_dir_path(schema_name: &String, table_name: &String) -> String {
-    format!("{}/foreign_keys", get_table_path(schema_name, table_name))
-}
-
-pub fn get_table_foreign_key_path(schema_name: &String, table_name: &String, foreign_key_name: &String) -> String {
-    format!("{}/{}.json", get_table_foreign_keys_dir_path(schema_name, table_name), foreign_key_name)
-}
