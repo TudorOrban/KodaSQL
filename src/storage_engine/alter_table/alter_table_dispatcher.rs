@@ -24,7 +24,7 @@ pub async fn dispatch_alter_table_statement(name: &ObjectName, operations: &Vec<
         match operation {
             // TODO: Add support for RLS, triggers etc
             AlterTableOperation::AddConstraint(table_constraint) => {
-                dispatch_add_constraint_statement(&table_name, table_constraint)?;
+                dispatch_add_constraint_statement(&table_name, table_constraint).await?;
             }
             _ => return Err(Error::NotSupportedUpdateTableOperation)
         }
@@ -43,12 +43,12 @@ fn bulk_operation_strategy(operation: &AlterTableOperation) -> bool {
     }
 }
 
-fn dispatch_add_constraint_statement(table_name: &String, table_constraint: TableConstraint) -> Result<String, Error> {
+async fn dispatch_add_constraint_statement(table_name: &String, table_constraint: TableConstraint) -> Result<String, Error> {
     println!("Add constraint: {:?}", table_constraint);
     
     match table_constraint {
         TableConstraint::ForeignKey { name, columns, foreign_table, referred_columns, on_delete, on_update, .. } => {
-            foreign_key_manager::handle_add_foreign_key(table_name, name, columns, foreign_table, referred_columns, on_delete, on_update)?;
+            foreign_key_manager::handle_add_foreign_key(table_name, name, columns, foreign_table, referred_columns, on_delete, on_update).await?;
         },
         _ => return Err(Error::UnsupportedConstraint { column_name: table_name.clone(), column_constraint: table_constraint.to_string() })
     }

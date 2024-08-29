@@ -1,8 +1,8 @@
 use sqlparser::ast::{Ident, ObjectName, ReferentialAction};
 
-use crate::{database::{database_loader, types::{Database, ForeignKey, TableSchema}, utils::find_database_table}, shared::errors::Error, storage_engine::utils::ast_unwrapper::get_referential_action};
+use crate::{database::{database_loader, database_navigator, types::{Database, ForeignKey, TableSchema}, utils::find_database_table}, shared::{errors::Error, file_manager}, storage_engine::utils::ast_unwrapper::get_referential_action};
 
-pub fn handle_add_foreign_key(
+pub async fn handle_add_foreign_key(
     table_name: &String,
     name: Option<Ident>,
     columns: Vec<Ident>,
@@ -13,12 +13,12 @@ pub fn handle_add_foreign_key(
 ) -> Result<String, Error> {
     validate_add_foreign_key(table_name, &name, &columns, &foreign_table)?;
 
-    create_foreign_key(table_name, name, columns, foreign_table, referred_columns, on_delete, on_update)?;
+    create_foreign_key(table_name, name, columns, foreign_table, referred_columns, on_delete, on_update).await?;
 
     Ok(String::from("Foreign key added successfully"))
 }
 
-fn create_foreign_key(
+async fn create_foreign_key(
     table_name: &String,
     name: Option<Ident>,
     columns: Vec<Ident>,
@@ -30,14 +30,18 @@ fn create_foreign_key(
     let database = database_loader::get_database()?;
     let table_schema = find_database_table(&database, table_name).unwrap();
 
-    let schema_name = foreign_table.0.first().unwrap();
-    let table_name = foreign_table.0.last().unwrap();
+    let foreign_table_name = foreign_table.0.first().ok_or(Error::MissingTableName)?;
 
-    let foreign_table_schema = database.schemas.iter().find(|schema| schema.name == schema_name.value).unwrap().tables.iter().find(|table| table.name == table_name.value).unwrap();
+    let foreign_table_schema = database.schemas.iter()
+        .find(|schema| schema.name == database.configuration.default_schema)
+        .ok_or_else(|| Error::SchemaDoesNotExist { schema_name: database.configuration.default_schema.clone() })?
+        .tables.iter()
+        .find(|table| table.name == foreign_table_name.value)
+        .ok_or_else(|| Error::TableDoesNotExist { table_name: foreign_table_name.value.clone() })?;
 
     let foreign_key = ForeignKey {
-        name: name.unwrap().value,
-        local_table: table_schema.name.clone(),
+        name: name.map(|ident| ident.value.clone()).unwrap_or_else(|| format!("fk_{}_{}_{}", table_name, foreign_table_name.value, table_schema.foreign_keys.len() + 1)),
+        local_table: table_name.clone(),
         local_columns: columns.iter().map(|ident| ident.value.clone()).collect(),
         foreign_table: foreign_table_schema.name.clone(),
         foreign_columns: referred_columns.iter().map(|ident| ident.value.clone()).collect(),
@@ -45,10 +49,15 @@ fn create_foreign_key(
         on_update: get_referential_action(&on_update)?,
     };
 
-    let mut updated_table_schema = table_schema.foreign_keys.clone();
-    updated_table_schema.push(foreign_key);
+    let mut updated_table_schema = table_schema.clone();
+    updated_table_schema.foreign_keys.push(foreign_key);
 
+    // Update table schema file
+    let schema_name = database.configuration.default_schema.clone();
+    let table_schema_file_path = database_navigator::get_table_schema_path(&schema_name, &table_name);
+    file_manager::write_json_into_file(&table_schema_file_path, &updated_table_schema)?;
 
+    database_loader::reload_table_schema(&schema_name, &table_name).await?;
 
     Ok(())
 }
@@ -78,12 +87,12 @@ fn validate_foreign_table(
     foreign_table: &ObjectName,
     database: &Database,
 ) -> Result<(), Error> {
-    let schema_name = foreign_table.0.first().ok_or(Error::MissingSchemaName)?;
+    let schema_name = database.configuration.default_schema.clone();
     let table_name = foreign_table.0.last().ok_or(Error::MissingTableName)?;
 
-    let schema = match database.schemas.iter().find(|schema| schema.name == schema_name.value) {
+    let schema = match database.schemas.iter().find(|schema| schema.name == schema_name) {
         Some(schema) => schema,
-        None => return Err(Error::SchemaDoesNotExist { schema_name: schema_name.value.clone() }),
+        None => return Err(Error::SchemaDoesNotExist { schema_name: schema_name.clone() }),
     };
 
     if schema.tables.iter().all(|t| t.name != table_name.value) {
