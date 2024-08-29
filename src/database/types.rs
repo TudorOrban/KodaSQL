@@ -46,7 +46,8 @@ pub struct SchemaConfiguration {
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct TableSchema {
     pub name: String,
-    pub columns: Vec<Column>
+    pub columns: Vec<Column>,
+    pub foreign_keys: Vec<ForeignKey>
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -57,7 +58,6 @@ pub struct Column {
     pub is_indexed: bool,
     pub order: usize,
 }
-
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub enum DataType {
@@ -73,6 +73,26 @@ pub enum Constraint {
     Unique,
     PrimaryKey,
     DefaultValue(String),
+    ForeignKey(ForeignKey)
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct ForeignKey {
+    pub name: String,
+    pub local_table: String,
+    pub local_columns: Vec<String>,
+    pub foreign_table: String,
+    pub foreign_columns: Vec<String>,
+    pub on_delete: ReferentialAction,
+    pub on_update: ReferentialAction,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub enum ReferentialAction {
+    Cascade,
+    SetNull,
+    NoAction,
+    Restrict,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

@@ -1,6 +1,6 @@
 use sqlparser::ast::{AlterTableOperation, ObjectName, TableConstraint};
 
-use crate::{database::database_loader, shared::errors::Error};
+use crate::{database::database_loader, shared::errors::Error, storage_engine::foreign_key::foreign_key_manager};
 
 use super::handle_bulk_operations::handle_bulk_operations;
 
@@ -17,7 +17,7 @@ pub async fn dispatch_alter_table_statement(name: &ObjectName, operations: &Vec<
     let other_operations: Vec<AlterTableOperation> = operations.iter().filter(|op| !bulk_operation_strategy(op)).cloned().collect();
 
     // Handle bulk operations
-    handle_bulk_operations(&table_name, &bulk_operations, &database).await?;
+    // handle_bulk_operations(&table_name, &bulk_operations, &database).await?;
 
     // Handle other operations
     for operation in other_operations {
@@ -46,6 +46,12 @@ fn bulk_operation_strategy(operation: &AlterTableOperation) -> bool {
 fn dispatch_add_constraint_statement(table_name: &String, table_constraint: TableConstraint) -> Result<String, Error> {
     println!("Add constraint: {:?}", table_constraint);
     
+    match table_constraint {
+        TableConstraint::ForeignKey { name, columns, foreign_table, referred_columns, on_delete, on_update, characteristics } => {
+            foreign_key_manager::handle_add_foreign_key(name, columns, foreign_table, referred_columns, on_delete, on_update, characteristics)?;
+        },
+        _ => return Err(Error::UnsupportedConstraint { column_name: table_name.clone(), column_constraint: table_constraint.to_string() })
+    }
 
 
 
