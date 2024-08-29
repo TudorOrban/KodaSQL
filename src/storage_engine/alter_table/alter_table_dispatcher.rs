@@ -1,4 +1,4 @@
-use sqlparser::ast::{AlterTableOperation, ObjectName};
+use sqlparser::ast::{AlterTableOperation, ObjectName, TableConstraint};
 
 use crate::{database::database_loader, shared::errors::Error};
 
@@ -23,6 +23,9 @@ pub async fn dispatch_alter_table_statement(name: &ObjectName, operations: &Vec<
     for operation in other_operations {
         match operation {
             // TODO: Add support for RLS, triggers etc
+            AlterTableOperation::AddConstraint(table_constraint) => {
+                dispatch_add_constraint_statement(&table_name, table_constraint)?;
+            }
             _ => return Err(Error::NotSupportedUpdateTableOperation)
         }
     }
@@ -38,4 +41,15 @@ fn bulk_operation_strategy(operation: &AlterTableOperation) -> bool {
         // TODO: Add AlterColumn and RenameColumn here
         _ => false
     }
+}
+
+fn dispatch_add_constraint_statement(table_name: &String, table_constraint: TableConstraint) -> Result<String, Error> {
+    println!("Add constraint: {:?}", table_constraint);
+    
+
+
+
+
+
+    Ok(String::from(""))
 }
