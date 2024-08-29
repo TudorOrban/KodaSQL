@@ -7,10 +7,14 @@ use crate::shared::errors::Error;
 use crate::database::database_loader;
 use crate::database::types::TableSchema;
 use crate::shared::file_manager;
+use crate::storage_engine::foreign_key::foreign_key_manager;
 use crate::storage_engine::index::index_manager;
 use crate::storage_engine::validation;
 
-pub async fn create_table(name: &ObjectName, columns: &Vec<ColumnDef>) -> Result<String, Error> {
+pub async fn create_table(
+    name: &ObjectName, 
+    columns: &Vec<ColumnDef>,
+) -> Result<String, Error> {
     let database = database_loader::get_database()?;
     let default_schema_name = database.configuration.default_schema.clone();
 
@@ -20,12 +24,18 @@ pub async fn create_table(name: &ObjectName, columns: &Vec<ColumnDef>) -> Result
 
     create_table_files(&default_schema_name, &table_schema).await?;
 
+    create_foreign_keys(&table_schema.name, columns).await?;
+
     index_manager::create_default_indexes(&default_schema_name, &table_schema).await?;
 
     update_schema_configuration(&default_schema_name, &table_schema.name).await
 }
 
-fn validate_create_table(database: &Database, name: &ObjectName, columns: &Vec<ColumnDef>) -> Result<TableSchema, Error> {
+fn validate_create_table(
+    database: &Database, 
+    name: &ObjectName, 
+    columns: &Vec<ColumnDef>,
+) -> Result<TableSchema, Error> {
     let first_identifier = name.0.first().ok_or(Error::MissingTableName)?;
     let table_name = first_identifier.value.clone();
     
@@ -34,7 +44,7 @@ fn validate_create_table(database: &Database, name: &ObjectName, columns: &Vec<C
 
     // Validate query columns and transform to custom schema types
     let schema_columns = validation::common::validate_column_definitions(columns, &(0..columns.len()).collect())?;
-
+    
     Ok(TableSchema { name: table_name, columns: schema_columns, foreign_keys: Vec::new() })
 }
 
@@ -56,6 +66,24 @@ async fn create_table_files(schema_name: &String, table_schema: &TableSchema) ->
     let table_data_filepath = get_table_data_path(schema_name, &table_schema.name);
     let table_data_headers = table_schema.columns.iter().map(|column| column.name.as_str()).collect::<Vec<&str>>().join(",") + "\n";
     fs::write(&table_data_filepath, table_data_headers.as_bytes()).map_err(Error::IOError)?;
+
+    Ok(())
+}
+
+async fn create_foreign_keys(
+    table_name: &String,
+    columns: &Vec<ColumnDef>,
+) -> Result<(), Error> {
+    for column in columns {
+        for option in column.options.clone() {
+            match option.option {
+                sqlparser::ast::ColumnOption::ForeignKey { foreign_table, referred_columns, on_delete, on_update, .. } => {
+                    foreign_key_manager::handle_add_foreign_key(&table_name.clone(), None, vec![column.name.clone()], foreign_table.clone(), referred_columns.clone(), on_delete.clone(), on_update.clone()).await?;
+                },
+                _ => continue
+            }
+        }
+    }
 
     Ok(())
 }

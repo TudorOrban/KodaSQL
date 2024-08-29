@@ -38,7 +38,7 @@ pub fn validate_bulk_operations(table_name: &String, table_schema: &TableSchema,
     let (old_changed_column_names, changed_columns_definitions) = ast_unwrapper::get_column_definitions_from_change_columns_ops(&changed_columns_ops);
     let changed_columns = validation::common::validate_column_definitions(
         &changed_columns_definitions, 
-        &(0..changed_columns_definitions.len()).collect()
+        &(0..changed_columns_definitions.len()).collect(),
     )?;
     
     // Validate column definitions for new columns 
@@ -51,7 +51,7 @@ pub fn validate_bulk_operations(table_name: &String, table_schema: &TableSchema,
     }).cloned().collect();
     let new_columns = validation::common::validate_column_definitions(
         &new_columns_definitions, 
-        &(0..new_columns_definitions.len()).collect()
+        &(0..new_columns_definitions.len()).collect(),
     )?;
 
     Ok((delete_column_names, old_changed_column_names, changed_columns, new_columns))
