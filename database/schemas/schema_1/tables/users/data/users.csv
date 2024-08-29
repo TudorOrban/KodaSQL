@@ -1,4 +1,2 @@
-id,username,email,age,new_new
-1, John Doe, johndoe@example.com, 4,Null
-2, Jane Doe, janedoe@example.com, 20,Null
-3, Mary Doe, mary1doe2@example.com, 10,Null
+id,username,organization_id
+1,,1

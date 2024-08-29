@@ -34,6 +34,7 @@ pub enum Error {
     ColumnUniquenessNotSatisfied { column_name: String, value: String },
     ColumnNotNull { column_name: String },
     ForeignKeyAlreadyExists { foreign_key_name: String },
+    ForeignKeyConstraintNotSatisfied { foreign_key_name: String },
 
     // Not supported
     GenericUnsupported,
@@ -86,6 +87,7 @@ impl fmt::Display for Error {
             Error::ColumnUniquenessNotSatisfied { column_name, value } => write!(f, "The uniqueness constraint of column {} is not satisifed by the value {}", column_name, value),
             Error::ColumnNotNull { column_name } => write!(f, "A null value has been provided for the column {} having a non-null constraint", column_name),
             Error::ForeignKeyAlreadyExists { foreign_key_name } => write!(f, "Foreign key {} already exists.", foreign_key_name),
+            Error::ForeignKeyConstraintNotSatisfied { foreign_key_name } => write!(f, "The foreign key constraint {} is not satisfied.", foreign_key_name),
 
             // Not supported
             Error::GenericUnsupported => write!(f, "You're attempting an SQL operation that is not currently supported."),

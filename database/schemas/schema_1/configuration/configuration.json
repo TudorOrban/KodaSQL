@@ -1,1 +1,1 @@
-{"tables":["users","final_test_table","test_delete_table","test_all_table","another","test_reload","test_select_table","test_create_table","test_insert_and_delete_record_table"]}
+{"tables":["final_test_table","test_delete_table","test_all_table","another","test_reload","test_select_table","test_create_table","test_insert_and_delete_record_table","organizations","users"]}

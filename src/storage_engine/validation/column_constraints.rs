@@ -1,22 +1,25 @@
 use std::collections::HashSet;
 
-use crate::{database::types::{Column, Constraint, InsertedRowColumn, TableSchema}, shared::{errors::Error, utils::transpose_matrix}, storage_engine::{index::index_reader, insert::utils}};
+use crate::{database::types::{Column, Constraint, InsertedRowColumn, TableSchema}, shared::{errors::Error, utils::transpose_matrix}, storage_engine::{index::index_reader, insert::utils, select::table_reader}};
 
 
-pub fn validate_column_constraints(inserted_rows: &Vec<Vec<InsertedRowColumn>>, schema_name: &String, table_schema: &TableSchema, complete: bool) -> Result<Vec<Vec<InsertedRowColumn>>, Error> {
+pub async fn validate_column_constraints(inserted_rows: &Vec<Vec<InsertedRowColumn>>, schema_name: &String, table_schema: &TableSchema, complete: bool) -> Result<Vec<Vec<InsertedRowColumn>>, Error> {
     let mut complete_inserted_rows_transposed: Vec<Vec<InsertedRowColumn>> = Vec::new();
 
     for column in table_schema.columns.clone() {
         let inserted_column_values = utils::get_inserted_column_values_from_rows(&inserted_rows, &column.name)?;
         
-        // Skip completing if complete flag is false (for update)
+        // Skip completing rows if complete flag is false (for update operation)
         let complete_column_values = if complete {
-            validate_null_and_default_constraints(&column, &inserted_column_values)?
+            validate_null_and_default_constraints(&column, &inserted_column_values).await?
         } else {
             inserted_column_values.into_iter().filter_map(|x| x).collect()
         };
 
-        validate_uniqueness_constraint(&column, schema_name, table_schema, &complete_column_values)?;
+        println!("Complete column values: {:?}", complete_column_values);
+        validate_foreign_key_constraint(&column, schema_name, table_schema, &complete_column_values).await?;
+
+        validate_uniqueness_constraint(&column, schema_name, table_schema, &complete_column_values).await?;
         
         let complete_column_row_values = complete_column_values.iter()
             .map(|value| InsertedRowColumn {
@@ -35,7 +38,7 @@ pub fn validate_column_constraints(inserted_rows: &Vec<Vec<InsertedRowColumn>>, 
 }
 
 // - Null values
-fn validate_null_and_default_constraints(column: &Column, inserted_column_values: &Vec<Option<String>>) -> Result<Vec<String>, Error> {
+async fn validate_null_and_default_constraints(column: &Column, inserted_column_values: &Vec<Option<String>>) -> Result<Vec<String>, Error> {
     let mut complete_column_values: Vec<String> = Vec::new();
 
     let is_not_null = column.constraints.contains(&Constraint::NotNull);
@@ -72,8 +75,27 @@ fn validate_null_and_default_constraints(column: &Column, inserted_column_values
 }
 
 
+// - Foreign key
+async fn validate_foreign_key_constraint(column: &Column, schema_name: &String, table_schema: &TableSchema, inserted_column_values: &Vec<String>) -> Result<(), Error> {
+    let foreign_key = table_schema.foreign_keys.iter().find(|foreign_key| foreign_key.local_columns.contains(&column.name));
+    println!("Foreign key: {:?}", foreign_key);
+    if let Some(foreign_key) = foreign_key {
+        for column_name in &foreign_key.foreign_columns {
+            let foreign_column_values = table_reader::read_column_values(schema_name, &foreign_key.foreign_table, column_name).await?;
+
+            for value in inserted_column_values {
+                if !foreign_column_values.contains(&value) {
+                    return Err(Error::ForeignKeyConstraintNotSatisfied { foreign_key_name: foreign_key.name.clone(), });
+                }
+            }
+        }
+    }
+
+    Ok(())
+}
+
 // - Uniqueness
-fn validate_uniqueness_constraint(column: &Column, schema_name: &String, table_schema: &TableSchema, inserted_column_values: &Vec<String>) -> Result<(), Error> {
+async fn validate_uniqueness_constraint(column: &Column, schema_name: &String, table_schema: &TableSchema, inserted_column_values: &Vec<String>) -> Result<(), Error> {
     let is_unique_constraint = column.constraints.contains(&Constraint::Unique) || column.constraints.contains(&Constraint::PrimaryKey);
     if !is_unique_constraint {
         return Ok(());

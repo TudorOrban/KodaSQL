@@ -21,7 +21,7 @@ pub async fn update_records(table: &TableWithJoins, assignments: &Vec<Assignment
     };
 
     // Validate update 
-    validate_update(&database, &table_name, &new_column_values)?;
+    validate_update(&database, &table_name, &new_column_values).await?;
     
     // Read from file
     let file_path = get_table_data_path(&schema_name, &table_name);
@@ -65,7 +65,7 @@ pub async fn update_records(table: &TableWithJoins, assignments: &Vec<Assignment
     Ok(String::from("Success: The records have been updated successfully."))
 }
 
-fn validate_update(database: &Database, table_name: &String, new_column_values: &HashMap<String, String>) -> Result<Vec<Vec<InsertedRowColumn>>, Error> {
+async fn validate_update(database: &Database, table_name: &String, new_column_values: &HashMap<String, String>) -> Result<Vec<Vec<InsertedRowColumn>>, Error> {
     // Validate table exists
     validation::common::validate_table_exists(database, table_name)?;
 
@@ -87,7 +87,7 @@ fn validate_update(database: &Database, table_name: &String, new_column_values: 
     validation::column_types::validate_column_types(table_schema, &inserted_rows)?;
     
     // Validate column constraints
-    let validated_inserted_rows = validation::column_constraints::validate_column_constraints(&inserted_rows, &database.configuration.default_schema, table_schema, false)?;
+    let validated_inserted_rows = validation::column_constraints::validate_column_constraints(&inserted_rows, &database.configuration.default_schema, table_schema, false).await?;
     
     Ok(validated_inserted_rows)
 }

@@ -1,0 +1,1 @@
+{"name":"organizations","columns":[{"name":"id","data_type":"Integer","constraints":["NotNull"],"is_indexed":false,"order":0},{"name":"name","data_type":"Text","constraints":[],"is_indexed":false,"order":1}],"foreign_keys":[]}

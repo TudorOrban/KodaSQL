@@ -2,8 +2,10 @@ use csv::{ReaderBuilder, StringRecord};
 use sqlparser::ast::Expr;
 use std::fs::File;
 
-use crate::database::database_navigator::get_table_data_path;
+use crate::database::database_navigator::{self, get_table_data_path};
+use crate::database::types::TableSchema;
 use crate::shared::errors::Error;
+use crate::shared::file_manager;
 use crate::storage_engine::filters::filter_manager;
 use crate::storage_engine::index::index_reader;
 
@@ -49,3 +51,27 @@ pub async fn read_table_with_indexes(
     Ok(rows)
 }
 
+pub async fn read_column_values(
+    schema_name: &String,
+    table_name: &String,
+    column_name: &String,
+) -> Result<Vec<String>, Error> {
+    let table_schema_file_path = database_navigator::get_table_schema_path(schema_name, &table_name);
+    let table_schema = file_manager::read_json_file::<TableSchema>(&table_schema_file_path)?;
+    let column = table_schema.columns.iter().find(|col| &col.name == column_name).ok_or(Error::ColumnDoesNotExist { table_name: table_name.clone(), column_name: column_name.clone() })?;
+
+    if column.is_indexed {
+        let index = index_reader::read_column_index(&schema_name, &table_name, &column_name)?;
+        
+        let column_values = index_reader::get_column_values_from_index(&index, &schema_name, &table_name)?;
+        
+        Ok(column_values)
+    } else {
+        let rows = read_table(&schema_name, &table_name, &None, true).await?;
+        
+        let column_index = table_schema.columns.iter().position(|col| &col.name == column_name).unwrap();
+        let column_values = rows.iter().map(|row| row.get(column_index).unwrap().to_string()).collect::<Vec<String>>();
+        
+        Ok(column_values)
+    }
+}

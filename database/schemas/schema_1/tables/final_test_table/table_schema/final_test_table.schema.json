@@ -14,20 +14,11 @@
     ],
     "foreign_keys": [
         {
-            "name": "fk_final_test_table_1",
-            "local_table": "final_test_table",
-            "local_columns": ["user_id"],
-            "foreign_table": "users",
-            "foreign_columns": ["id"],
-            "on_delete": "Cascade",
-            "on_update": "Cascade"
-        },
-        {
             "name": "final_test_table_users_fk",
             "local_table": "final_test_table",
             "local_columns": ["username"],
             "foreign_table": "users",
-            "foreign_columns": ["name"],
+            "foreign_columns": ["username"],
             "on_delete": "NoAction",
             "on_update": "NoAction"
         }

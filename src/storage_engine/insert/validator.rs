@@ -7,7 +7,7 @@ use crate::storage_engine::validation;
 
 use super::utils;
 
-pub fn validate_insert_into(database: &Database, name: &ObjectName, columns: &Vec<Ident>, source: &Option<Box<Query>>) -> Result<(String, Vec<String>, Vec<Vec<InsertedRowColumn>>), Error> {
+pub async fn validate_insert_into(database: &Database, name: &ObjectName, columns: &Vec<Ident>, source: &Option<Box<Query>>) -> Result<(String, Vec<String>, Vec<Vec<InsertedRowColumn>>), Error> {
     // Unwrap table name
     let first_identifier = name.0.first().ok_or(Error::MissingTableName)?;
     let table_name = first_identifier.value.clone();
@@ -34,7 +34,7 @@ pub fn validate_insert_into(database: &Database, name: &ObjectName, columns: &Ve
 
     validation::column_types::validate_column_types(table_schema, &inserted_rows)?;
 
-    let complete_inserted_rows = validation::column_constraints::validate_column_constraints(&inserted_rows, &database.configuration.default_schema, table_schema, true)?;
+    let complete_inserted_rows = validation::column_constraints::validate_column_constraints(&inserted_rows, &database.configuration.default_schema, table_schema, true).await?;
 
     Ok((table_name, column_names, complete_inserted_rows))
 }
