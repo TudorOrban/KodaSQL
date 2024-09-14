@@ -1,10 +1,13 @@
-use sqlparser::ast::{Expr, TableWithJoins};
+use sqlparser::ast::{Expr, FromTable};
 
 use crate::{database::{self, database_loader, types::Database, utils::find_database_table}, shared::errors::Error, storage_engine::{filters::filter_column_finder, index::index_updater, select::{record_handler, table_reader}, utils::ast_unwrapper}};
 
-pub async fn delete_records(from: &Vec<TableWithJoins>, filters: &Option<Expr>) -> Result<String, Error> {
+pub async fn delete_records(from_table: &FromTable, filters: &Option<Expr>) -> Result<String, Error> {
     // Unwrap table name
-    let table_name = ast_unwrapper::get_table_name_from_from_vector(from)?;
+    let from_vec = match from_table {
+        FromTable::WithFromKeyword(from) | FromTable::WithoutKeyword(from) => from,
+    };
+    let table_name = ast_unwrapper::get_table_name_from_from_vector(from_vec)?;
     
     // Prepare: get database blueprint and necessary data from it
     let database = database_loader::get_database()?;

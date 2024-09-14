@@ -1,7 +1,8 @@
 use tokio::net::TcpStream;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use sqlparser::parser::Parser;
-use sqlparser::dialect::GenericDialect;
+use sqlparser::dialect::MySqlDialect;
+
 
 use crate::command_dispatcher::statement_dispatcher;
 use crate::network_protocol;
@@ -62,9 +63,14 @@ pub async fn process_request(request: Request) -> Result<String, Error> {
     let sql = &request.sql;
 
     // Parse request into AST
-    let dialect = GenericDialect {};
-    let ast = Parser::parse_sql(&dialect, sql).map_err(|_| Error::InvalidSQLSyntax)?;
+    let dialect = MySqlDialect {};
+    let ast = Parser::parse_sql(&dialect, sql);
     println!("AST: {:?}", ast);
+    // match error
+    let ast = match ast {
+        Ok(ast) => ast,
+        Err(_e) => return Err(Error::InvalidSQLSyntax),
+    };
 
     // Process AST and dispatch statements
     let mut results = Vec::new();

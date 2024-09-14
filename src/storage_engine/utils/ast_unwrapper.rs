@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use sqlparser::ast::{AlterTableOperation, Assignment, ColumnDef, ColumnOptionDef, Expr, Ident, OrderByExpr, Query, Select, SelectItem, TableFactor, TableWithJoins, Value};
+use sqlparser::ast::{AlterTableOperation, Assignment, ColumnDef, ColumnOptionDef, Expr, Ident, OrderBy, Query, Select, SelectItem, TableFactor, TableWithJoins, Value};
 
 use crate::{database::types::ReferentialAction, shared::errors::Error, storage_engine::select::types::SelectParameters};
 
@@ -28,7 +28,7 @@ pub fn unwrap_select_query(query: &Query) -> Result<SelectParameters, Error> {
             select_parameters.columns = get_columns(projection);
 
             select_parameters.filters = selection.clone();
-
+            
             let (order_column_name, ascending) = get_ordering(order_by);
             select_parameters.order_column_name = order_column_name;
             select_parameters.ascending = ascending;
@@ -76,14 +76,16 @@ pub fn get_columns(projection: &Vec<SelectItem>) -> Vec<String> {
         .collect()
 }
 
-pub fn get_ordering(order_by: &Vec<OrderByExpr>) -> (Option<String>, bool) {
+pub fn get_ordering(order_by: &Option<OrderBy>) -> (Option<String>, bool) {
     let mut order_column_name: Option<String> = None;
     let mut ascending = true;
 
-    if let Some(order_by_expr) = order_by.get(0) {
-        if let Expr::Identifier(ident) = &order_by_expr.expr {
-            order_column_name = Some(ident.value.clone());
-            ascending = order_by_expr.asc.unwrap_or(true);
+    if let Some(order_by_expr) = order_by {
+        if let Some(order_by_expr_first) = order_by_expr.exprs.get(0) {
+            if let Expr::Identifier(ident) = &order_by_expr_first.expr {
+                order_column_name = Some(ident.value.clone());
+                ascending = order_by_expr_first.asc.unwrap_or(true);
+            }
         }
     }
 
@@ -111,7 +113,11 @@ pub fn get_new_column_values(assignments: &Vec<Assignment>) -> Result<HashMap<St
     let mut new_column_values: HashMap<String, String> = HashMap::new();
 
     for assignment in assignments {
-        let column_name = assignment.id.first().ok_or(Error::MissingTableName)?.value.clone();
+        let expr = &assignment.value;
+        let column_name = match expr {
+            Expr::Identifier(ident) => ident.value.clone(),
+            _ => return Err(Error::InvalidSQLSyntax),
+        };
         let column_value = match &assignment.value {
             Expr::Value(Value::SingleQuotedString(value)) => value.clone(),
             Expr::Value(Value::Number(n, _)) => n.clone(),
@@ -126,7 +132,7 @@ pub fn get_new_column_values(assignments: &Vec<Assignment>) -> Result<HashMap<St
 pub fn get_column_definitions_from_change_columns_ops(columns_ops: &Vec<AlterTableOperation>) -> (Vec<String>, Vec<ColumnDef>) {
     let mut old_column_names: Vec<String> = Vec::new();
     let new_columns_definitions: Vec<ColumnDef> = columns_ops.iter().filter_map(|op| {
-        if let AlterTableOperation::ChangeColumn { new_name, data_type, options, old_name } = op {
+        if let AlterTableOperation::ChangeColumn { new_name, data_type, options, old_name, .. } = op {
             // Transform each ColumnOption into a ColumnOptionDef
             let options_def: Vec<ColumnOptionDef> = options.iter().map(|option| {
                 ColumnOptionDef {
