@@ -4,5 +4,6 @@
         { "name": "id", "data_type": "Integer", "constraints": ["NotNull"], "is_indexed": false, "order": 0 },
         { "name": "name", "data_type": "Text", "constraints": [], "is_indexed": false, "order": 1 }
     ],
-    "foreign_keys": []
+    "foreign_keys": [],
+    "triggers": [{ "name": "example_trigger", "table_name": "organizations", "period": "Before", "events": ["Insert"], "action": { "fuction_name": "" }, "exec_body": { "exec_type": "Function" } }]
 }

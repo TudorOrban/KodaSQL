@@ -126,7 +126,8 @@ pub struct Trigger {
     pub table_name: String,
     pub period: TriggerPeriod,
     pub events: Vec<TriggerEvent>,
-    pub action: TriggerAction
+    pub action: TriggerAction,
+    pub exec_body: TriggerExecBody,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -149,6 +150,16 @@ pub struct TriggerAction {
     pub fuction_name: String
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct TriggerExecBody {
+    pub exec_type: TriggerExecBodyType,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub enum TriggerExecBodyType {
+    Function,
+    Procedure,
+}
 
 // Utils
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
