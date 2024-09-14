@@ -9,3 +9,4 @@ pub mod validation;
 pub mod index;
 pub mod filters;
 pub mod utils;
+pub mod trigger;

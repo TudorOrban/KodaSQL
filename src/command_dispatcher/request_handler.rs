@@ -1,7 +1,7 @@
 use tokio::net::TcpStream;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use sqlparser::parser::Parser;
-use sqlparser::dialect::MySqlDialect;
+use sqlparser::dialect::PostgreSqlDialect;
 
 
 use crate::command_dispatcher::statement_dispatcher;
@@ -63,7 +63,7 @@ pub async fn process_request(request: Request) -> Result<String, Error> {
     let sql = &request.sql;
 
     // Parse request into AST
-    let dialect = MySqlDialect {};
+    let dialect = PostgreSqlDialect {};
     let ast = Parser::parse_sql(&dialect, sql);
     println!("AST: {:?}", ast);
     // match error

@@ -45,7 +45,7 @@ fn validate_create_table(
     // Validate query columns and transform to custom schema types
     let schema_columns = validation::common::validate_column_definitions(columns, &(0..columns.len()).collect())?;
     
-    Ok(TableSchema { name: table_name, columns: schema_columns, foreign_keys: Vec::new() })
+    Ok(TableSchema { name: table_name, columns: schema_columns, foreign_keys: Vec::new(), triggers: Vec::new() })
 }
 
 async fn create_table_folders(schema_name: &String, table_name: &String) -> Result<(), Error> {

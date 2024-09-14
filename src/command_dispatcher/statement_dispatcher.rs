@@ -7,6 +7,7 @@ use crate::storage_engine::delete::delete_table;
 use crate::storage_engine::insert::insert_into;
 use crate::storage_engine::select::select_handler;
 use crate::storage_engine::create::{create_schema, create_table};
+use crate::storage_engine::trigger::create_trigger;
 use crate::storage_engine::update::update_records;
 
 pub async fn dispatch_statement(statement: &Statement) -> Result<String, Error> {
@@ -43,6 +44,9 @@ pub async fn dispatch_statement(statement: &Statement) -> Result<String, Error> 
         Statement::AlterTable { name, operations, .. } => {
             // update_table::update_table(name, operations).await
             alter_table_dispatcher::dispatch_alter_table_statement(name, operations).await
+        }
+        Statement::CreateTrigger { name, period, events, table_name, exec_body, .. } => {
+            create_trigger::create_trigger(&name, &table_name, &period, &events, &exec_body).await
         }
         _ => Err(Error::GenericUnsupported)
     }

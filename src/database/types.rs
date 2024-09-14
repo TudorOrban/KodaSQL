@@ -47,7 +47,8 @@ pub struct SchemaConfiguration {
 pub struct TableSchema {
     pub name: String,
     pub columns: Vec<Column>,
-    pub foreign_keys: Vec<ForeignKey>
+    pub foreign_keys: Vec<ForeignKey>,
+    pub triggers: Vec<Trigger>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -113,8 +114,48 @@ pub struct InsertedRowColumn {
     pub value: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct ColumnValues {
     pub column_name: String,
     pub values: Vec<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct Trigger {
+    pub name: String,
+    pub table_name: String,
+    pub period: TriggerPeriod,
+    pub events: Vec<TriggerEvent>,
+    pub action: TriggerAction
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub enum TriggerPeriod {
+    Before,
+    After,
+    InsteadOf,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub enum TriggerEvent {
+    Insert,
+    Update(Vec<CustomIdent>),
+    Delete,
+    Truncate,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct TriggerAction {
+    pub fuction_name: String
+}
+
+
+// Utils
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct CustomIdent {
+    /// The value of the identifier without quotes.
+    pub value: String,
+    /// The starting quote if any. Valid quote characters are the single quote,
+    /// double quote, backtick, and opening square bracket.
+    pub quote_style: Option<char>,
 }

@@ -25,6 +25,7 @@ pub enum Error {
     // Missing
     MissingSchemaName,
     MissingTableName,
+    MissingTriggerName,
 
     // Not allowed
     TableNameAlreadyExists { table_name: String },
@@ -78,6 +79,7 @@ impl fmt::Display for Error {
             // Missing
             Error::MissingSchemaName => write!(f, "Missing schema name."),
             Error::MissingTableName => write!(f, "Missing table name."),
+            Error::MissingTriggerName => write!(f, "Missing trigger name."),
 
             // Not allowed
             Error::TableNameAlreadyExists { table_name } => write!(f, "Table name {} already exists.", table_name),
